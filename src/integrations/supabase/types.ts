@@ -14,7 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      documents: {
+        Row: {
+          created_at: string
+          credits_used: number | null
+          error_message: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          mime_type: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number | null
+          error_message?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          mime_type?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number | null
+          error_message?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          mime_type?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          company: string | null
+          created_at: string
+          credits_remaining: number
+          credits_total: number
+          full_name: string | null
+          id: string
+          plan: string
+          trial_ends_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string
+          credits_remaining?: number
+          credits_total?: number
+          full_name?: string | null
+          id?: string
+          plan?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string
+          credits_remaining?: number
+          credits_total?: number
+          full_name?: string | null
+          id?: string
+          plan?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tender_analyses: {
+        Row: {
+          bbbee_level: string | null
+          cidb_grade: string | null
+          closing_date: string | null
+          compliance_requirements: Json | null
+          confidence_score: number | null
+          contact_info: Json | null
+          created_at: string
+          document_id: string
+          estimated_value: string | null
+          id: string
+          important_dates: Json | null
+          issuing_entity: string | null
+          key_clauses: Json | null
+          raw_response: Json | null
+          reference_number: string | null
+          risks: Json | null
+          scope_of_work: string | null
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          bbbee_level?: string | null
+          cidb_grade?: string | null
+          closing_date?: string | null
+          compliance_requirements?: Json | null
+          confidence_score?: number | null
+          contact_info?: Json | null
+          created_at?: string
+          document_id: string
+          estimated_value?: string | null
+          id?: string
+          important_dates?: Json | null
+          issuing_entity?: string | null
+          key_clauses?: Json | null
+          raw_response?: Json | null
+          reference_number?: string | null
+          risks?: Json | null
+          scope_of_work?: string | null
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          bbbee_level?: string | null
+          cidb_grade?: string | null
+          closing_date?: string | null
+          compliance_requirements?: Json | null
+          confidence_score?: number | null
+          contact_info?: Json | null
+          created_at?: string
+          document_id?: string
+          estimated_value?: string | null
+          id?: string
+          important_dates?: Json | null
+          issuing_entity?: string | null
+          key_clauses?: Json | null
+          raw_response?: Json | null
+          reference_number?: string | null
+          risks?: Json | null
+          scope_of_work?: string | null
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_analyses_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: true
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
