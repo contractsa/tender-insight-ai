@@ -92,62 +92,74 @@ function DocumentDetail() {
             </div>
           )}
 
-          {Array.isArray(analysis.compliance_requirements) && analysis.compliance_requirements.length > 0 && (
-            <div className="surface-card p-6">
-              <h3 className="font-display font-bold mb-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-success" /> Compliance Requirements</h3>
-              <ul className="space-y-2">
-                {analysis.compliance_requirements.map((c: string, i: number) => (
-                  <li key={i} className="text-sm text-muted-foreground flex gap-2"><span className="text-success">✓</span> {c}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {Array.isArray(analysis.key_clauses) && analysis.key_clauses.length > 0 && (
-            <div className="surface-card p-6">
-              <h3 className="font-display font-bold mb-3">Key Clauses</h3>
-              <div className="space-y-3">
-                {analysis.key_clauses.map((c: any, i: number) => (
-                  <div key={i} className="pb-3 border-b border-border last:border-b-0 last:pb-0">
-                    <div className="font-semibold text-sm mb-1">{c.title}</div>
-                    <div className="text-sm text-muted-foreground">{c.detail}</div>
-                  </div>
-                ))}
+          {(() => {
+            const compliance = (analysis.compliance_requirements ?? []) as string[];
+            return compliance.length > 0 && (
+              <div className="surface-card p-6">
+                <h3 className="font-display font-bold mb-3 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-success" /> Compliance Requirements</h3>
+                <ul className="space-y-2">
+                  {compliance.map((c, i) => (
+                    <li key={i} className="text-sm text-muted-foreground flex gap-2"><span className="text-success">✓</span> {c}</li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {Array.isArray(analysis.risks) && analysis.risks.length > 0 && (
-            <div className="surface-card p-6">
-              <h3 className="font-display font-bold mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-warning" /> Risks</h3>
-              <div className="space-y-2">
-                {analysis.risks.map((r: any, i: number) => (
-                  <div key={i} className="flex gap-3 items-start">
-                    <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${
-                      r.severity === "high" ? "bg-destructive/15 text-destructive" :
-                      r.severity === "medium" ? "bg-warning/15 text-warning" :
-                      "bg-muted text-muted-foreground"
-                    }`}>{r.severity}</span>
-                    <p className="text-sm text-muted-foreground">{r.description}</p>
-                  </div>
-                ))}
+          {(() => {
+            const clauses = (analysis.key_clauses ?? []) as Array<{ title: string; detail: string }>;
+            return clauses.length > 0 && (
+              <div className="surface-card p-6">
+                <h3 className="font-display font-bold mb-3">Key Clauses</h3>
+                <div className="space-y-3">
+                  {clauses.map((c, i) => (
+                    <div key={i} className="pb-3 border-b border-border last:border-b-0 last:pb-0">
+                      <div className="font-semibold text-sm mb-1">{c.title}</div>
+                      <div className="text-sm text-muted-foreground">{c.detail}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {Array.isArray(analysis.important_dates) && analysis.important_dates.length > 0 && (
-            <div className="surface-card p-6">
-              <h3 className="font-display font-bold mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-brand-blue" /> Important Dates</h3>
-              <div className="space-y-2">
-                {analysis.important_dates.map((d: any, i: number) => (
-                  <div key={i} className="flex justify-between text-sm gap-3">
-                    <span className="text-muted-foreground">{d.event}</span>
-                    <span className="font-medium text-brand-blue">{d.date}</span>
-                  </div>
-                ))}
+          {(() => {
+            const risks = (analysis.risks ?? []) as Array<{ severity: string; description: string }>;
+            return risks.length > 0 && (
+              <div className="surface-card p-6">
+                <h3 className="font-display font-bold mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-warning" /> Risks</h3>
+                <div className="space-y-2">
+                  {risks.map((r, i) => (
+                    <div key={i} className="flex gap-3 items-start">
+                      <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${
+                        r.severity === "high" ? "bg-destructive/15 text-destructive" :
+                        r.severity === "medium" ? "bg-warning/15 text-warning" :
+                        "bg-muted text-muted-foreground"
+                      }`}>{r.severity}</span>
+                      <p className="text-sm text-muted-foreground">{r.description}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
+
+          {(() => {
+            const dates = (analysis.important_dates ?? []) as Array<{ event: string; date: string }>;
+            return dates.length > 0 && (
+              <div className="surface-card p-6">
+                <h3 className="font-display font-bold mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-brand-blue" /> Important Dates</h3>
+                <div className="space-y-2">
+                  {dates.map((d, i) => (
+                    <div key={i} className="flex justify-between text-sm gap-3">
+                      <span className="text-muted-foreground">{d.event}</span>
+                      <span className="font-medium text-brand-blue">{d.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {analysis.contact_info && (analysis.contact_info as any).name && (
             <div className="surface-card p-6">
