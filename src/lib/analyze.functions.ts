@@ -3,7 +3,9 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const SYSTEM_PROMPT = `You are a specialist AI for analysing South African procurement documents (government tenders, municipal RFQs, NEC contracts, PRASA/Transnet/Eskom, B-BBEE certs, SBD forms). Extract structured fields with SA regulatory context (CIDB grades, B-BBEE levels, PPPFA, PFMA, NEC clauses). Return ONLY valid JSON. Use null for unknown fields. Be concise.`;
+const SYSTEM_PROMPT = `You are a specialist AI for analysing South African procurement documents (government tenders, municipal RFQs, NEC contracts, PRASA/Transnet/Eskom, B-BBEE certs, SBD forms). Extract structured fields with SA regulatory context (CIDB grades, B-BBEE levels, PPPFA, PFMA, NEC clauses). Return ONLY valid JSON via the tool call. Use null for unknown fields. Be concise.`;
+
+const CREDITS_PER_ANALYSIS = 3;
 
 const TOOL = {
   type: "function" as const,
@@ -40,77 +42,131 @@ export const analyzeDocument = createServerFn({ method: "POST" })
     z.object({ documentId: z.string().uuid() }).parse(input)
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("AI gateway not configured");
+    if (!apiKey) throw new Error("AI service is not configured. Please contact support.");
 
-    // Load document (RLS scoped to user)
-    const { data: doc, error: docErr } = await supabase
-      .from("documents").select("*").eq("id", data.documentId).single();
-    if (docErr || !doc) throw new Error("Document not found");
+    // 1. Load document via admin (we already verify ownership below)
+    const { data: doc, error: docErr } = await supabaseAdmin
+      .from("documents").select("*").eq("id", data.documentId).maybeSingle();
+    if (docErr) throw new Error("Could not load document");
+    if (!doc) throw new Error("Document not found");
     if (doc.user_id !== userId) throw new Error("Forbidden");
 
-    // Mark processing
-    await supabase.from("documents").update({ status: "processing" }).eq("id", doc.id);
+    // 2. Idempotency: existing completed analysis?
+    const { data: existing } = await supabaseAdmin
+      .from("tender_analyses").select("id").eq("document_id", doc.id).maybeSingle();
+    if (existing) {
+      return { success: true, documentId: doc.id, alreadyAnalysed: true };
+    }
+
+    // 3. Status guard: never re-enter processing
+    if (doc.status === "processing") {
+      throw new Error("This document is already being analysed. Please wait a moment.");
+    }
+
+    // 4. Atomic credit reservation BEFORE any AI work
+    const { data: reserved, error: reserveErr } = await supabaseAdmin
+      .rpc("reserve_credits", { _user_id: userId, _amount: CREDITS_PER_ANALYSIS });
+    if (reserveErr) throw new Error("Could not reserve credits");
+    if (!reserved) {
+      throw new Error(`Insufficient credits. ${CREDITS_PER_ANALYSIS} credits required per analysis. Please upgrade your plan.`);
+    }
+
+    // From here on, any failure MUST refund credits.
+    let creditsRefunded = false;
+    const refund = async () => {
+      if (creditsRefunded) return;
+      creditsRefunded = true;
+      await supabaseAdmin.rpc("refund_credits", { _user_id: userId, _amount: CREDITS_PER_ANALYSIS });
+    };
+
+    // 5. Mark processing
+    await supabaseAdmin.from("documents").update({ status: "processing", error_message: null }).eq("id", doc.id);
 
     try {
-      // Get signed URL (admin can read)
+      // 6. Signed URL + fetch file
       const { data: signed, error: sErr } = await supabaseAdmin.storage
         .from("documents").createSignedUrl(doc.file_path, 600);
-      if (sErr || !signed) throw new Error("Could not access file");
+      if (sErr || !signed) throw new Error("Could not access uploaded file");
 
-      // Fetch file as base64 for vision
       const fileRes = await fetch(signed.signedUrl);
+      if (!fileRes.ok) throw new Error("Failed to download file for analysis");
       const buf = await fileRes.arrayBuffer();
+
+      // Safety: cap base64 payload (~20MB raw → ~27MB base64)
+      if (buf.byteLength > 25 * 1024 * 1024) {
+        throw new Error("File too large for analysis (max 20MB)");
+      }
       const base64 = Buffer.from(buf).toString("base64");
       const mimeType = doc.mime_type || "application/pdf";
 
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            {
-              role: "user",
-              content: [
-                { type: "text", text: `Analyse this SA procurement document (${doc.file_name}). Extract every field accurately.` },
-                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
-              ],
-            },
-          ],
-          tools: [TOOL],
-          tool_choice: { type: "function", function: { name: "extract_tender" } },
-        }),
-      });
-
-      if (!aiRes.ok) {
-        const txt = await aiRes.text();
-        if (aiRes.status === 429) throw new Error("Rate limit — please try again in a minute");
-        if (aiRes.status === 402) throw new Error("AI credits exhausted — contact support");
-        throw new Error(`AI error: ${aiRes.status} ${txt.slice(0, 200)}`);
+      // 7. Call AI gateway with 90s timeout
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 90_000);
+      let aiRes: Response;
+      try {
+        aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          signal: ctrl.signal,
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-pro",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: `Analyse this SA procurement document (${doc.file_name}). Extract every field accurately.` },
+                  { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
+                ],
+              },
+            ],
+            tools: [TOOL],
+            tool_choice: { type: "function", function: { name: "extract_tender" } },
+          }),
+        });
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") {
+          throw new Error("Analysis timed out after 90s. The document may be too complex — try a smaller file.");
+        }
+        throw new Error("Could not reach the AI service. Please try again.");
+      } finally {
+        clearTimeout(timeout);
       }
 
-      const payload = await aiRes.json();
-      const toolCall = payload.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall) throw new Error("AI did not return structured output");
-      const extracted = JSON.parse(toolCall.function.arguments);
+      if (!aiRes.ok) {
+        const txt = await aiRes.text().catch(() => "");
+        if (aiRes.status === 429) throw new Error("AI service is busy — please try again in a minute.");
+        if (aiRes.status === 402) throw new Error("AI service credits exhausted. Please contact support.");
+        throw new Error(`AI service error (${aiRes.status}). ${txt.slice(0, 200)}`);
+      }
 
-      const creditsUsed = 3;
+      const payload = await aiRes.json().catch(() => null);
+      const toolCall = payload?.choices?.[0]?.message?.tool_calls?.[0];
+      if (!toolCall?.function?.arguments) {
+        throw new Error("AI did not return structured output. The document may be unreadable.");
+      }
 
-      // Insert analysis + update doc + deduct credits in parallel
-      await supabase.from("tender_analyses").insert({
+      let extracted: any;
+      try {
+        extracted = JSON.parse(toolCall.function.arguments);
+      } catch {
+        throw new Error("AI returned malformed output. Please try again.");
+      }
+
+      // 8. Insert analysis (unique constraint on document_id guarantees single row)
+      const { error: insErr } = await supabaseAdmin.from("tender_analyses").insert({
         document_id: doc.id,
         user_id: userId,
-        summary: extracted.summary,
-        reference_number: extracted.reference_number,
-        issuing_entity: extracted.issuing_entity,
-        closing_date: extracted.closing_date,
-        estimated_value: extracted.estimated_value,
-        cidb_grade: extracted.cidb_grade,
-        bbbee_level: extracted.bbbee_level,
-        scope_of_work: extracted.scope_of_work,
+        summary: extracted.summary ?? null,
+        reference_number: extracted.reference_number ?? null,
+        issuing_entity: extracted.issuing_entity ?? null,
+        closing_date: extracted.closing_date ?? null,
+        estimated_value: extracted.estimated_value ?? null,
+        cidb_grade: extracted.cidb_grade ?? null,
+        bbbee_level: extracted.bbbee_level ?? null,
+        scope_of_work: extracted.scope_of_work ?? null,
         compliance_requirements: extracted.compliance_requirements ?? [],
         key_clauses: extracted.key_clauses ?? [],
         risks: extracted.risks ?? [],
@@ -120,23 +176,27 @@ export const analyzeDocument = createServerFn({ method: "POST" })
         raw_response: extracted,
       });
 
-      await supabase.from("documents")
-        .update({ status: "completed", credits_used: creditsUsed })
-        .eq("id", doc.id);
-
-      // Deduct credits via admin (RLS-safe)
-      const { data: prof } = await supabaseAdmin.from("profiles")
-        .select("credits_remaining").eq("user_id", userId).single();
-      if (prof) {
-        await supabaseAdmin.from("profiles")
-          .update({ credits_remaining: Math.max(0, (prof.credits_remaining ?? 0) - creditsUsed) })
-          .eq("user_id", userId);
+      if (insErr) {
+        // Unique-constraint conflict = another concurrent analysis already saved.
+        // Treat as success and refund our reservation so we don't double-charge.
+        if (insErr.code === "23505") {
+          await refund();
+          await supabaseAdmin.from("documents")
+            .update({ status: "completed" }).eq("id", doc.id);
+          return { success: true, documentId: doc.id, alreadyAnalysed: true };
+        }
+        throw new Error("Could not save analysis results");
       }
+
+      await supabaseAdmin.from("documents")
+        .update({ status: "completed", credits_used: CREDITS_PER_ANALYSIS, error_message: null })
+        .eq("id", doc.id);
 
       return { success: true, documentId: doc.id };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      await supabase.from("documents")
+      await refund();
+      await supabaseAdmin.from("documents")
         .update({ status: "failed", error_message: message })
         .eq("id", doc.id);
       throw new Error(message);
