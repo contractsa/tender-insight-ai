@@ -32,16 +32,19 @@ function UploadPage() {
   }
 
   async function handleAnalyze() {
-    if (!file || !user) return;
+    if (!file || !user || busy) return;
     setBusy(true);
+    let uploadedPath: string | null = null;
     try {
       setStage("Uploading…");
-      const path = `${user.id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+      const safeName = file.name.replace(/[^\w.-]/g, "_").slice(0, 120);
+      const path = `${user.id}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName}`;
       const { error: upErr } = await supabase.storage.from("documents").upload(path, file, {
         contentType: file.type,
         upsert: false,
       });
-      if (upErr) throw upErr;
+      if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
+      uploadedPath = path;
 
       setStage("Creating record…");
       const { data: doc, error: docErr } = await supabase.from("documents").insert({
@@ -52,7 +55,7 @@ function UploadPage() {
         mime_type: file.type,
         status: "uploaded",
       }).select().single();
-      if (docErr || !doc) throw docErr ?? new Error("Insert failed");
+      if (docErr || !doc) throw new Error(docErr?.message ?? "Could not save document record");
 
       setStage("AI is analysing your tender…");
       await analyzeFn({ data: { documentId: doc.id } });
@@ -62,6 +65,11 @@ function UploadPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
       toast.error(message);
+      // Cleanup orphaned storage file if DB insert failed before doc row exists.
+      // (If doc row exists, analyze.functions.ts handled status=failed already.)
+      if (uploadedPath && message.includes("Could not save document record")) {
+        await supabase.storage.from("documents").remove([uploadedPath]).catch(() => {});
+      }
       setBusy(false);
       setStage("");
     }
