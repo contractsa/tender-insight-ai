@@ -57,16 +57,15 @@ function UploadPage() {
       }).select().single();
       if (docErr || !doc) throw new Error(docErr?.message ?? "Could not save document record");
 
-      setStage("AI is analysing your tender…");
-      await analyzeFn({ data: { documentId: doc.id } });
-
-      toast.success("Analysis complete");
+      // Hand off to the detail page — it auto-triggers analysis with polling
+      // so the user can safely navigate away mid-analysis.
+      toast.success("Upload complete. Starting analysis…");
+      // Fire-and-forget: detail page will also auto-trigger if needed.
+      analyzeFn({ data: { documentId: doc.id } }).catch(() => {});
       navigate({ to: "/documents/$id", params: { id: doc.id } });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
       toast.error(message);
-      // Cleanup orphaned storage file if DB insert failed before doc row exists.
-      // (If doc row exists, analyze.functions.ts handled status=failed already.)
       if (uploadedPath && message.includes("Could not save document record")) {
         await supabase.storage.from("documents").remove([uploadedPath]).catch(() => {});
       }
