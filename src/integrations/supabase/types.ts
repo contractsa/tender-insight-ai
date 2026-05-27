@@ -106,18 +106,34 @@ export type Database = {
           compliance_requirements: Json | null
           confidence_score: number | null
           contact_info: Json | null
+          contract_duration: string | null
+          contract_intelligence: Json | null
           created_at: string
+          department: string | null
+          detected_tables: Json | null
           document_id: string
           estimated_value: string | null
+          evaluation_criteria: Json | null
           id: string
           important_dates: Json | null
           issuing_entity: string | null
+          jv_requirements: string | null
           key_clauses: Json | null
+          pages_flagged: Json | null
+          procurement_type: string | null
+          professional_registrations: Json | null
+          province: string | null
           raw_response: Json | null
+          readiness_score: number | null
           reference_number: string | null
+          returnables: Json | null
           risks: Json | null
           scope_of_work: string | null
+          subcontracting_requirements: string | null
+          submission_details: Json | null
           summary: string | null
+          tender_category: string | null
+          tender_title: string | null
           user_id: string
         }
         Insert: {
@@ -127,18 +143,34 @@ export type Database = {
           compliance_requirements?: Json | null
           confidence_score?: number | null
           contact_info?: Json | null
+          contract_duration?: string | null
+          contract_intelligence?: Json | null
           created_at?: string
+          department?: string | null
+          detected_tables?: Json | null
           document_id: string
           estimated_value?: string | null
+          evaluation_criteria?: Json | null
           id?: string
           important_dates?: Json | null
           issuing_entity?: string | null
+          jv_requirements?: string | null
           key_clauses?: Json | null
+          pages_flagged?: Json | null
+          procurement_type?: string | null
+          professional_registrations?: Json | null
+          province?: string | null
           raw_response?: Json | null
+          readiness_score?: number | null
           reference_number?: string | null
+          returnables?: Json | null
           risks?: Json | null
           scope_of_work?: string | null
+          subcontracting_requirements?: string | null
+          submission_details?: Json | null
           summary?: string | null
+          tender_category?: string | null
+          tender_title?: string | null
           user_id: string
         }
         Update: {
@@ -148,18 +180,34 @@ export type Database = {
           compliance_requirements?: Json | null
           confidence_score?: number | null
           contact_info?: Json | null
+          contract_duration?: string | null
+          contract_intelligence?: Json | null
           created_at?: string
+          department?: string | null
+          detected_tables?: Json | null
           document_id?: string
           estimated_value?: string | null
+          evaluation_criteria?: Json | null
           id?: string
           important_dates?: Json | null
           issuing_entity?: string | null
+          jv_requirements?: string | null
           key_clauses?: Json | null
+          pages_flagged?: Json | null
+          procurement_type?: string | null
+          professional_registrations?: Json | null
+          province?: string | null
           raw_response?: Json | null
+          readiness_score?: number | null
           reference_number?: string | null
+          returnables?: Json | null
           risks?: Json | null
           scope_of_work?: string | null
+          subcontracting_requirements?: string | null
+          submission_details?: Json | null
           summary?: string | null
+          tender_category?: string | null
+          tender_title?: string | null
           user_id?: string
         }
         Relationships: [
