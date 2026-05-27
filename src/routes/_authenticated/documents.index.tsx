@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/documents")({
+export const Route = createFileRoute("/_authenticated/documents/")({
   component: DocumentsList,
 });
 
