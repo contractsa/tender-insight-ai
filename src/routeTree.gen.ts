@@ -15,9 +15,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
-import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
+import { Route as AuthenticatedDocumentsIndexRouteImport } from './routes/_authenticated/documents.index'
 import { Route as AuthenticatedDocumentsIdRouteImport } from './routes/_authenticated/documents.$id'
 
 const SignupRoute = SignupRouteImport.update({
@@ -49,11 +49,6 @@ const AuthenticatedUploadRoute = AuthenticatedUploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedDocumentsRoute = AuthenticatedDocumentsRouteImport.update({
-  id: '/documents',
-  path: '/documents',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -64,11 +59,17 @@ const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedDocumentsIndexRoute =
+  AuthenticatedDocumentsIndexRouteImport.update({
+    id: '/documents/',
+    path: '/documents/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedDocumentsIdRoute =
   AuthenticatedDocumentsIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedDocumentsRoute,
+    id: '/documents/$id',
+    path: '/documents/$id',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -78,9 +79,9 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/account': typeof AuthenticatedAccountRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/documents': typeof AuthenticatedDocumentsRouteWithChildren
   '/upload': typeof AuthenticatedUploadRoute
   '/documents/$id': typeof AuthenticatedDocumentsIdRoute
+  '/documents/': typeof AuthenticatedDocumentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -89,9 +90,9 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/account': typeof AuthenticatedAccountRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/documents': typeof AuthenticatedDocumentsRouteWithChildren
   '/upload': typeof AuthenticatedUploadRoute
   '/documents/$id': typeof AuthenticatedDocumentsIdRoute
+  '/documents': typeof AuthenticatedDocumentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -102,9 +103,9 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/documents': typeof AuthenticatedDocumentsRouteWithChildren
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/documents/$id': typeof AuthenticatedDocumentsIdRoute
+  '/_authenticated/documents/': typeof AuthenticatedDocumentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -115,9 +116,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/account'
     | '/dashboard'
-    | '/documents'
     | '/upload'
     | '/documents/$id'
+    | '/documents/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -126,9 +127,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/account'
     | '/dashboard'
-    | '/documents'
     | '/upload'
     | '/documents/$id'
+    | '/documents'
   id:
     | '__root__'
     | '/'
@@ -138,9 +139,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/account'
     | '/_authenticated/dashboard'
-    | '/_authenticated/documents'
     | '/_authenticated/upload'
     | '/_authenticated/documents/$id'
+    | '/_authenticated/documents/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -195,13 +196,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUploadRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/documents': {
-      id: '/_authenticated/documents'
-      path: '/documents'
-      fullPath: '/documents'
-      preLoaderRoute: typeof AuthenticatedDocumentsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -216,42 +210,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/documents/': {
+      id: '/_authenticated/documents/'
+      path: '/documents'
+      fullPath: '/documents/'
+      preLoaderRoute: typeof AuthenticatedDocumentsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/documents/$id': {
       id: '/_authenticated/documents/$id'
-      path: '/$id'
+      path: '/documents/$id'
       fullPath: '/documents/$id'
       preLoaderRoute: typeof AuthenticatedDocumentsIdRouteImport
-      parentRoute: typeof AuthenticatedDocumentsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
-interface AuthenticatedDocumentsRouteChildren {
-  AuthenticatedDocumentsIdRoute: typeof AuthenticatedDocumentsIdRoute
-}
-
-const AuthenticatedDocumentsRouteChildren: AuthenticatedDocumentsRouteChildren =
-  {
-    AuthenticatedDocumentsIdRoute: AuthenticatedDocumentsIdRoute,
-  }
-
-const AuthenticatedDocumentsRouteWithChildren =
-  AuthenticatedDocumentsRoute._addFileChildren(
-    AuthenticatedDocumentsRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRouteWithChildren
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
+  AuthenticatedDocumentsIdRoute: typeof AuthenticatedDocumentsIdRoute
+  AuthenticatedDocumentsIndexRoute: typeof AuthenticatedDocumentsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedDocumentsRoute: AuthenticatedDocumentsRouteWithChildren,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
+  AuthenticatedDocumentsIdRoute: AuthenticatedDocumentsIdRoute,
+  AuthenticatedDocumentsIndexRoute: AuthenticatedDocumentsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -268,3 +257,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
