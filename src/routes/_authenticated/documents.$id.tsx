@@ -110,6 +110,14 @@ function DocumentDetail() {
   const compliance: string[] = (a.compliance_requirements ?? []) as string[];
   const closingDays = daysUntil(a.closing_date);
 
+  const formsDetected: any[] = (a.forms_detected ?? []) as any[];
+  const scoringTables: any[] = (a.scoring_tables ?? []) as any[];
+  const pricingSchedules: any[] = (a.pricing_schedules ?? []) as any[];
+  const signatureBlocks: any[] = (a.signature_blocks ?? []) as any[];
+  const addenda: any[] = (a.addenda ?? []) as any[];
+  const pageIntel: any[] = (a.page_intelligence ?? []) as any[];
+  const bidData: any = a.bid_data ?? {};
+
   const mandatoryReturnables = returnables.filter((r) => r.mandatory);
   const optionalReturnables = returnables.filter((r) => !r.mandatory);
 
