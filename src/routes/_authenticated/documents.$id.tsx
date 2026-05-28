@@ -110,6 +110,14 @@ function DocumentDetail() {
   const compliance: string[] = (a.compliance_requirements ?? []) as string[];
   const closingDays = daysUntil(a.closing_date);
 
+  const formsDetected: any[] = (a.forms_detected ?? []) as any[];
+  const scoringTables: any[] = (a.scoring_tables ?? []) as any[];
+  const pricingSchedules: any[] = (a.pricing_schedules ?? []) as any[];
+  const signatureBlocks: any[] = (a.signature_blocks ?? []) as any[];
+  const addenda: any[] = (a.addenda ?? []) as any[];
+  const pageIntel: any[] = (a.page_intelligence ?? []) as any[];
+  const bidData: any = a.bid_data ?? {};
+
   const mandatoryReturnables = returnables.filter((r) => r.mandatory);
   const optionalReturnables = returnables.filter((r) => !r.mandatory);
 
@@ -499,9 +507,153 @@ function DocumentDetail() {
                 </div>
               </Section>
             )}
+
+            {Object.values(bidData).some((v) => v) && (
+              <Section title="Bid Data & Conditions of Bid" icon={<FileText className="w-4 h-4 text-brand-blue" />} defaultOpen={false}>
+                <dl className="space-y-2 text-sm">
+                  {Object.entries(bidData).filter(([, v]) => v !== null && v !== undefined && v !== "").map(([k, v]) => (
+                    <div key={k} className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                      <dt className="text-muted-foreground shrink-0 sm:w-48 capitalize">{k.replace(/_/g, " ")}</dt>
+                      <dd className="font-medium flex-1 sm:text-right break-words">{String(v)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </Section>
+            )}
+
+            {formsDetected.length > 0 && (
+              <Section title="Forms Detected (MBD / SBD / CIDB / Declarations)" icon={<ClipboardList className="w-4 h-4 text-brand-blue" />} count={formsDetected.length} defaultOpen={false}>
+                <div className="space-y-2.5">
+                  {formsDetected.map((f, i) => (
+                    <div key={i} className="flex gap-3 items-start text-sm pb-2.5 border-b border-border last:border-b-0 last:pb-0">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-brand-blue/15 text-brand-blue shrink-0">p.{f.page}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium">{f.code ? `${f.code} — ` : ""}{f.title}</div>
+                        {f.purpose && <div className="text-xs text-muted-foreground mt-0.5">{f.purpose}</div>}
+                        <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
+                          {f.signature_required && <span className="text-destructive">signature required</span>}
+                          {f.witness_required && <span>witness required</span>}
+                          {f.completion_status && <span>· {f.completion_status}</span>}
+                        </div>
+                        {Array.isArray(f.attachments_required) && f.attachments_required.length > 0 && (
+                          <div className="text-xs text-muted-foreground mt-1">Attach: {f.attachments_required.join(", ")}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {scoringTables.length > 0 && (
+              <Section title="Scoring & Evaluation Matrices" icon={<Scale className="w-4 h-4 text-brand-blue" />} count={scoringTables.length} defaultOpen={false}>
+                <div className="space-y-5">
+                  {scoringTables.map((s, i) => (
+                    <div key={i}>
+                      <div className="text-sm font-semibold mb-1">
+                        {s.title}
+                        <span className="text-xs text-muted-foreground ml-2">p.{s.page}{s.type ? ` · ${s.type}` : ""}</span>
+                      </div>
+                      {Array.isArray(s.columns) && s.columns.length > 0 && Array.isArray(s.rows) && (
+                        <div className="overflow-x-auto -mx-2">
+                          <table className="w-full text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-muted">{s.columns.map((c: string, j: number) => <th key={j} className="text-left p-2 border border-border">{c}</th>)}</tr>
+                            </thead>
+                            <tbody>
+                              {s.rows.map((row: any[], r: number) => (
+                                <tr key={r}>{row.map((cell, c) => <td key={c} className="p-2 border border-border align-top">{cell ?? ""}</td>)}</tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                      {s.notes && <div className="text-xs text-muted-foreground mt-1">{s.notes}</div>}
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {pricingSchedules.length > 0 && (
+              <Section title="Pricing Schedules / BOQs" icon={<Table2 className="w-4 h-4 text-brand-blue" />} count={pricingSchedules.length} defaultOpen={false}>
+                <div className="space-y-2.5">
+                  {pricingSchedules.map((p, i) => (
+                    <div key={i} className="text-sm pb-2.5 border-b border-border last:border-b-0 last:pb-0">
+                      <div className="flex justify-between gap-3">
+                        <div className="font-medium">{p.title}</div>
+                        <span className="text-xs text-muted-foreground shrink-0">p.{p.page}{p.type ? ` · ${p.type}` : ""}</span>
+                      </div>
+                      {Array.isArray(p.sections) && p.sections.length > 0 && (
+                        <div className="text-xs text-muted-foreground mt-1">{p.sections.join(" · ")}</div>
+                      )}
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                        {p.line_item_count != null && <span>{p.line_item_count} line items</span>}
+                        {p.total_estimated && <span>· {p.total_estimated}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {signatureBlocks.length > 0 && (
+              <Section title="Signature Blocks" icon={<User className="w-4 h-4 text-brand-blue" />} count={signatureBlocks.length} defaultOpen={false}>
+                <div className="space-y-2 text-sm">
+                  {signatureBlocks.map((s, i) => (
+                    <div key={i} className="flex gap-3 items-start pb-2 border-b border-border last:border-b-0 last:pb-0">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-brand-blue/15 text-brand-blue shrink-0">p.{s.page}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium">{s.form_or_section}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {s.signatory_role}{s.witness_required ? " · witness required" : ""}{s.commissioner_required ? " · commissioner of oaths" : ""}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {addenda.length > 0 && (
+              <Section title="Addenda & Briefing Minutes" icon={<FileText className="w-4 h-4 text-brand-blue" />} count={addenda.length} defaultOpen={false}>
+                <div className="space-y-2 text-sm">
+                  {addenda.map((a2, i) => (
+                    <div key={i} className="flex justify-between gap-3 pb-2 border-b border-border last:border-b-0 last:pb-0">
+                      <div>
+                        <div className="font-medium">{a2.number ? `${a2.number} — ` : ""}{a2.title}</div>
+                        {a2.acknowledgement_required && <div className="text-xs text-destructive">acknowledgement required</div>}
+                      </div>
+                      <div className="text-xs text-muted-foreground text-right shrink-0">
+                        {a2.date}{a2.page ? ` · p.${a2.page}` : ""}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {pageIntel.length > 0 && (
+              <Section title="Page-by-Page Intelligence Map" icon={<FileText className="w-4 h-4 text-brand-blue" />} count={pageIntel.length} defaultOpen={false}>
+                <div className="space-y-1.5 text-sm max-h-[28rem] overflow-y-auto pr-2">
+                  {pageIntel.map((p, i) => (
+                    <div key={i} className="flex gap-3 items-start py-1.5 border-b border-border last:border-b-0">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0 font-mono">p.{p.page}</span>
+                      <div className="min-w-0 flex-1">
+                        {p.section && <span className="text-xs text-brand-blue font-semibold mr-2">{p.section}</span>}
+                        <span className="text-sm">{p.contents}</span>
+                        {p.requires_action && <span className="text-xs text-destructive ml-2">action</span>}
+                        {p.notes && <div className="text-xs text-muted-foreground mt-0.5">{p.notes}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
           </div>
         </div>
       )}
     </div>
   );
 }
+

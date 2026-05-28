@@ -100,7 +100,9 @@ export type Database = {
       }
       tender_analyses: {
         Row: {
+          addenda: Json | null
           bbbee_level: string | null
+          bid_data: Json | null
           cidb_grade: string | null
           closing_date: string | null
           compliance_requirements: Json | null
@@ -114,12 +116,15 @@ export type Database = {
           document_id: string
           estimated_value: string | null
           evaluation_criteria: Json | null
+          forms_detected: Json | null
           id: string
           important_dates: Json | null
           issuing_entity: string | null
           jv_requirements: string | null
           key_clauses: Json | null
+          page_intelligence: Json | null
           pages_flagged: Json | null
+          pricing_schedules: Json | null
           procurement_type: string | null
           professional_registrations: Json | null
           province: string | null
@@ -129,6 +134,8 @@ export type Database = {
           returnables: Json | null
           risks: Json | null
           scope_of_work: string | null
+          scoring_tables: Json | null
+          signature_blocks: Json | null
           subcontracting_requirements: string | null
           submission_details: Json | null
           summary: string | null
@@ -137,7 +144,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          addenda?: Json | null
           bbbee_level?: string | null
+          bid_data?: Json | null
           cidb_grade?: string | null
           closing_date?: string | null
           compliance_requirements?: Json | null
@@ -151,12 +160,15 @@ export type Database = {
           document_id: string
           estimated_value?: string | null
           evaluation_criteria?: Json | null
+          forms_detected?: Json | null
           id?: string
           important_dates?: Json | null
           issuing_entity?: string | null
           jv_requirements?: string | null
           key_clauses?: Json | null
+          page_intelligence?: Json | null
           pages_flagged?: Json | null
+          pricing_schedules?: Json | null
           procurement_type?: string | null
           professional_registrations?: Json | null
           province?: string | null
@@ -166,6 +178,8 @@ export type Database = {
           returnables?: Json | null
           risks?: Json | null
           scope_of_work?: string | null
+          scoring_tables?: Json | null
+          signature_blocks?: Json | null
           subcontracting_requirements?: string | null
           submission_details?: Json | null
           summary?: string | null
@@ -174,7 +188,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          addenda?: Json | null
           bbbee_level?: string | null
+          bid_data?: Json | null
           cidb_grade?: string | null
           closing_date?: string | null
           compliance_requirements?: Json | null
@@ -188,12 +204,15 @@ export type Database = {
           document_id?: string
           estimated_value?: string | null
           evaluation_criteria?: Json | null
+          forms_detected?: Json | null
           id?: string
           important_dates?: Json | null
           issuing_entity?: string | null
           jv_requirements?: string | null
           key_clauses?: Json | null
+          page_intelligence?: Json | null
           pages_flagged?: Json | null
+          pricing_schedules?: Json | null
           procurement_type?: string | null
           professional_registrations?: Json | null
           province?: string | null
@@ -203,6 +222,8 @@ export type Database = {
           returnables?: Json | null
           risks?: Json | null
           scope_of_work?: string | null
+          scoring_tables?: Json | null
+          signature_blocks?: Json | null
           subcontracting_requirements?: string | null
           submission_details?: Json | null
           summary?: string | null
