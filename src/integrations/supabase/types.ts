@@ -16,41 +16,83 @@ export type Database = {
     Tables: {
       documents: {
         Row: {
+          compliance_checklist: Json | null
+          contract_result: Json | null
           created_at: string
           credits_used: number | null
           error_message: string | null
+          evaluation_result: Json | null
+          extraction_failed_passes: string[] | null
+          extraction_passes_completed: number | null
+          extraction_version: string | null
           file_name: string
           file_path: string
           file_size: number
           id: string
+          master_result: Json | null
           mime_type: string | null
+          missing_data: Json | null
+          page_level_intelligence: Json | null
+          pricing_result: Json | null
+          returnables_result: Json | null
+          risk_flags: Json | null
           status: string
+          submission_result: Json | null
+          triage_result: Json | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          compliance_checklist?: Json | null
+          contract_result?: Json | null
           created_at?: string
           credits_used?: number | null
           error_message?: string | null
+          evaluation_result?: Json | null
+          extraction_failed_passes?: string[] | null
+          extraction_passes_completed?: number | null
+          extraction_version?: string | null
           file_name: string
           file_path: string
           file_size: number
           id?: string
+          master_result?: Json | null
           mime_type?: string | null
+          missing_data?: Json | null
+          page_level_intelligence?: Json | null
+          pricing_result?: Json | null
+          returnables_result?: Json | null
+          risk_flags?: Json | null
           status?: string
+          submission_result?: Json | null
+          triage_result?: Json | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          compliance_checklist?: Json | null
+          contract_result?: Json | null
           created_at?: string
           credits_used?: number | null
           error_message?: string | null
+          evaluation_result?: Json | null
+          extraction_failed_passes?: string[] | null
+          extraction_passes_completed?: number | null
+          extraction_version?: string | null
           file_name?: string
           file_path?: string
           file_size?: number
           id?: string
+          master_result?: Json | null
           mime_type?: string | null
+          missing_data?: Json | null
+          page_level_intelligence?: Json | null
+          pricing_result?: Json | null
+          returnables_result?: Json | null
+          risk_flags?: Json | null
           status?: string
+          submission_result?: Json | null
+          triage_result?: Json | null
           updated_at?: string
           user_id?: string
         }

@@ -1,0 +1,15 @@
+ALTER TABLE public.documents
+  ADD COLUMN IF NOT EXISTS triage_result jsonb,
+  ADD COLUMN IF NOT EXISTS submission_result jsonb,
+  ADD COLUMN IF NOT EXISTS returnables_result jsonb,
+  ADD COLUMN IF NOT EXISTS evaluation_result jsonb,
+  ADD COLUMN IF NOT EXISTS pricing_result jsonb,
+  ADD COLUMN IF NOT EXISTS contract_result jsonb,
+  ADD COLUMN IF NOT EXISTS page_level_intelligence jsonb,
+  ADD COLUMN IF NOT EXISTS compliance_checklist jsonb,
+  ADD COLUMN IF NOT EXISTS risk_flags jsonb,
+  ADD COLUMN IF NOT EXISTS missing_data jsonb,
+  ADD COLUMN IF NOT EXISTS extraction_version text,
+  ADD COLUMN IF NOT EXISTS extraction_passes_completed integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS extraction_failed_passes text[],
+  ADD COLUMN IF NOT EXISTS master_result jsonb;
