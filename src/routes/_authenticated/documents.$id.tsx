@@ -335,7 +335,7 @@ function SidePanel({ doc, master, setTab }: { doc: any; master: any; setTab: (t:
       <div>
         <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Document</div>
         <h2 className="font-bold text-sm break-words">{triage.issuing_entity || doc.file_name}</h2>
-        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{master.procurement_summary?.one_line}</p>
+        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{master?.procurement_summary?.one_line}</p>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {triage.document_type && <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted">{triage.document_type}</span>}
           {triage.estimated_complexity && <span className={`text-[10px] px-2 py-0.5 rounded-full ${complexBadge[triage.estimated_complexity] ?? "bg-muted"}`}>{triage.estimated_complexity}</span>}
