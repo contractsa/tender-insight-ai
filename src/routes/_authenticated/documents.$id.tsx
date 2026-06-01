@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,37 @@ import {
 export const Route = createFileRoute("/_authenticated/documents/$id")({
   component: DocumentDetail,
 });
+
+// ============================================================
+// Error boundary — prevents a single tab from blanking the page
+// ============================================================
+class TabErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error) { console.error("Tab render error:", error); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="surface-card p-6 max-w-2xl border-destructive/40 bg-destructive/5">
+          <div className="flex items-center gap-2 text-destructive font-semibold text-sm mb-2">
+            <AlertTriangle className="w-4 h-4" /> This section could not be displayed
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">
+            An unexpected error occurred while rendering this tab. The other tabs and your data are unaffected.
+          </p>
+          <p className="text-xs text-muted-foreground font-mono break-words">{this.state.error.message}</p>
+          <button
+            onClick={() => this.setState({ error: null })}
+            className="mt-4 px-3 py-1.5 rounded-lg border border-border text-xs inline-flex items-center gap-2 hover:border-brand-blue hover:text-brand-blue"
+          >
+            <RefreshCw className="w-3 h-3" /> Try again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ============================================================
 // Helpers
