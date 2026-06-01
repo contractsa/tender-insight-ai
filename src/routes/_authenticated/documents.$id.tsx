@@ -455,16 +455,32 @@ function TabPanel({ tab, master }: { tab: TabKey; master: any }) {
 // ============================================================
 // TAB COMPONENTS
 // ============================================================
+function MissingPassCard({ message }: { message: string }) {
+  return (
+    <div className="surface-card p-6 max-w-2xl border-warning/40 bg-warning/5">
+      <div className="flex items-center gap-2 text-warning font-semibold text-sm mb-2">
+        <AlertTriangle className="w-4 h-4" /> Section unavailable
+      </div>
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
 function SummaryTab({ master }: { master: any }) {
-  const tri = master.triage ?? {};
+  const tri = master?.triage ?? {};
+  const viability: string[] = Array.isArray(master?.procurement_summary?.bid_viability_factors)
+    ? master.procurement_summary.bid_viability_factors
+    : [];
+  const allFlags: any[] = Array.isArray(master?.risk_flags) ? master.risk_flags : [];
   return (
     <div className="space-y-6 max-w-4xl">
-      <p className="text-xl font-bold leading-relaxed">{master.procurement_summary?.one_line ?? "Procurement document"}</p>
+      <p className="text-xl font-bold leading-relaxed">{master?.procurement_summary?.one_line ?? "Procurement document"}</p>
 
       <div>
         <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Bid Viability Factors</h3>
         <ul className="space-y-1.5">
-          {(master.procurement_summary?.bid_viability_factors ?? []).map((f: string, i: number) => (
+          {viability.length === 0 && <li className="text-sm text-muted-foreground">No viability factors extracted.</li>}
+          {viability.map((f: string, i: number) => (
             <li key={i} className="flex items-start gap-2 text-sm"><span className="text-brand-blue mt-0.5">✓</span>{f}</li>
           ))}
         </ul>
@@ -477,26 +493,26 @@ function SummaryTab({ master }: { master: any }) {
             ["Type", tri.document_type], ["Authority", tri.procurement_authority_type],
             ["Issuer", tri.issuing_entity], ["Industry", tri.industry_domain],
             ["Total pages", tri.total_pages], ["Complexity", tri.estimated_complexity],
-            ["Extraction confidence", master.meta?.overall_confidence != null ? `${Math.round(master.meta.overall_confidence * 100)}%` : null],
-            ["Extraction version", master.meta?.extraction_version],
+            ["Extraction confidence", master?.meta?.overall_confidence != null ? `${Math.round(master.meta.overall_confidence * 100)}%` : null],
+            ["Extraction version", master?.meta?.extraction_version],
           ].filter(([, v]) => v != null && v !== "").map(([k, v]) => (
             <div key={k as string} className="contents"><dt className="text-muted-foreground">{k}</dt><dd className="font-medium">{String(v)}</dd></div>
           ))}
         </dl>
       </div>
 
-      {(master.risk_flags ?? []).length > 0 && (
+      {allFlags.length > 0 && (
         <div className="surface-card p-5">
           <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">All Risk Flags</h3>
           <div className="space-y-2">
-            {master.risk_flags.map((f: any, i: number) => (
+            {allFlags.map((f: any, i: number) => (
               <div key={i} className="flex gap-3 items-start text-sm">
                 <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${
-                  f.severity === "critical" ? "bg-destructive text-destructive-foreground" :
-                  f.severity === "high" ? "bg-orange-500 text-white" :
-                  f.severity === "medium" ? "bg-yellow-400 text-black" : "bg-muted text-muted-foreground"
-                }`}>{f.severity}</span>
-                <div><div className="font-medium">{f.flag}</div><div className="text-xs text-muted-foreground mt-0.5">{f.action_required}{f.page_reference ? ` · p.${f.page_reference}` : ""}</div></div>
+                  f?.severity === "critical" ? "bg-destructive text-destructive-foreground" :
+                  f?.severity === "high" ? "bg-orange-500 text-white" :
+                  f?.severity === "medium" ? "bg-yellow-400 text-black" : "bg-muted text-muted-foreground"
+                }`}>{f?.severity}</span>
+                <div><div className="font-medium">{f?.flag}</div><div className="text-xs text-muted-foreground mt-0.5">{f?.action_required}{f?.page_reference ? ` · p.${f.page_reference}` : ""}</div></div>
               </div>
             ))}
           </div>
