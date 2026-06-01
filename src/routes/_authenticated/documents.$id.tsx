@@ -300,13 +300,13 @@ function DocumentDetail() {
 // SIDE PANEL
 // ============================================================
 function SidePanel({ doc, master, setTab }: { doc: any; master: any; setTab: (t: TabKey) => void }) {
-  const triage = master.triage ?? {};
-  const sub = master.submission?.submission ?? {};
-  const flags: any[] = master.risk_flags ?? [];
-  const compliance: any[] = master.compliance_checklist ?? [];
-  const returnables: any[] = master.returnables?.returnables ?? [];
-  const pageIntel: any[] = master.page_level_intelligence ?? [];
-  const dqCount = returnables.filter((r) => r.disqualifies_if_missing).length;
+  const triage = master?.triage ?? {};
+  const sub = master?.submission?.submission ?? {};
+  const flags: any[] = Array.isArray(master?.risk_flags) ? master.risk_flags : [];
+  const compliance: any[] = Array.isArray(master?.compliance_checklist) ? master.compliance_checklist : [];
+  const returnables: any[] = Array.isArray(master?.returnables?.returnables) ? master.returnables.returnables : [];
+  const pageIntel: any[] = Array.isArray(master?.page_level_intelligence) ? master.page_level_intelligence : [];
+  const dqCount = returnables.filter((r) => r?.disqualifies_if_missing).length;
 
   const sevColor: Record<string, string> = {
     critical: "bg-destructive text-destructive-foreground",
