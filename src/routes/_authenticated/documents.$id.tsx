@@ -287,7 +287,9 @@ function DocumentDetail() {
             </div>
           )}
 
-          <TabPanel tab={tab} master={master} />
+          <TabErrorBoundary key={tab}>
+            <TabPanel tab={tab} master={master} />
+          </TabErrorBoundary>
         </div>
       </main>
     </div>
