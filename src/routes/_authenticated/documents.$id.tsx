@@ -523,15 +523,18 @@ function SummaryTab({ master }: { master: any }) {
 }
 
 function SubmissionTab({ master }: { master: any }) {
-  const s = master.submission?.submission ?? {};
-  const b = s.briefing_session;
-  const d = daysUntil(s.closing_date);
+  if (master?.submission == null) {
+    return <MissingPassCard message="Submission details were not extracted — click Retry 2A above." />;
+  }
+  const s = master?.submission?.submission ?? {};
+  const b = s?.briefing_session;
+  const d = daysUntil(s?.closing_date);
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="surface-card p-6 text-center">
         <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center justify-center gap-2"><Clock className="w-4 h-4" />Closing Date</div>
-        <div className="text-3xl sm:text-4xl font-extrabold mb-1">{s.closing_date ?? "—"}</div>
-        {s.closing_time && <div className="text-lg text-muted-foreground mb-2">{s.closing_time}</div>}
+        <div className="text-3xl sm:text-4xl font-extrabold mb-1">{s?.closing_date ?? "—"}</div>
+        {s?.closing_time && <div className="text-lg text-muted-foreground mb-2">{s.closing_time}</div>}
         {d !== null && (
           <div className={`inline-block mt-2 px-4 py-1.5 rounded-full font-bold text-sm ${
             d < 0 ? "bg-muted text-muted-foreground" : d <= 3 ? "bg-destructive/15 text-destructive" : d <= 14 ? "bg-orange-500/15 text-orange-600" : "bg-success/15 text-success"
@@ -543,9 +546,9 @@ function SubmissionTab({ master }: { master: any }) {
         <div className="surface-card p-5 border-destructive/40 bg-destructive/5">
           <div className="flex items-center gap-2 text-destructive font-bold text-sm mb-2"><AlertTriangle className="w-4 h-4" />MANDATORY BRIEFING SESSION</div>
           <dl className="text-sm space-y-1">
-            <Row k="Date" v={b.date} /><Row k="Time" v={b.time} /><Row k="Venue" v={b.venue} />
-            <Row k="Attendance register" v={b.attendance_register_required ? "Required" : "Optional"} />
-            <Row k="Non-attendance" v={b.non_attendance_consequence} />
+            <Row k="Date" v={b?.date} /><Row k="Time" v={b?.time} /><Row k="Venue" v={b?.venue} />
+            <Row k="Attendance register" v={b?.attendance_register_required ? "Required" : "Optional"} />
+            <Row k="Non-attendance" v={b?.non_attendance_consequence} />
           </dl>
         </div>
       )}
@@ -553,12 +556,12 @@ function SubmissionTab({ master }: { master: any }) {
       <div className="surface-card p-5">
         <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Submission Details</h3>
         <dl className="text-sm space-y-1.5">
-          <Row k="Method" v={s.submission_method} />
-          <Row k="Physical address" v={s.physical_address} />
-          <Row k="Portal URL" v={s.portal_url} />
-          <Row k="Copies required" v={s.number_of_copies} />
-          <Row k="Packaging" v={s.packaging_instructions} />
-          <Row k="Labelling" v={s.labelling_instructions} />
+          <Row k="Method" v={s?.submission_method} />
+          <Row k="Physical address" v={s?.physical_address} />
+          <Row k="Portal URL" v={s?.portal_url} />
+          <Row k="Copies required" v={s?.number_of_copies} />
+          <Row k="Packaging" v={s?.packaging_instructions} />
+          <Row k="Labelling" v={s?.labelling_instructions} />
         </dl>
       </div>
     </div>
@@ -566,39 +569,42 @@ function SubmissionTab({ master }: { master: any }) {
 }
 
 function ReturnablesTab({ master }: { master: any }) {
-  const list: any[] = master.returnables?.returnables ?? [];
+  if (master?.returnables?.returnables == null || !Array.isArray(master?.returnables?.returnables)) {
+    return <MissingPassCard message="Returnables were not extracted — click Retry 2B above." />;
+  }
+  const list: any[] = master.returnables.returnables;
   if (list.length === 0) return <p className="text-sm text-muted-foreground">No returnables extracted.</p>;
   return (
     <div className="space-y-3 max-w-4xl">
       <p className="text-sm text-muted-foreground mb-2">
-        {list.length} returnables · {list.filter((r) => r.disqualifies_if_missing).length} disqualifying
+        {list.length} returnables · {list.filter((r) => r?.disqualifies_if_missing).length} disqualifying
       </p>
       {list.map((r, i) => (
-        <div key={i} className={`surface-card p-4 ${r.disqualifies_if_missing ? "border-l-4 border-l-destructive" : ""}`}>
+        <div key={i} className={`surface-card p-4 ${r?.disqualifies_if_missing ? "border-l-4 border-l-destructive" : ""}`}>
           <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-bold text-sm">{r.name}</h4>
-              {r.requires_commissioner_of_oaths && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+              <h4 className="font-bold text-sm">{r?.name}</h4>
+              {r?.requires_commissioner_of_oaths && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
             </div>
             <div className="flex gap-1.5 flex-wrap">
-              {r.page_number != null && <button className="text-[10px] px-2 py-0.5 rounded bg-brand-blue/15 text-brand-blue font-bold">p.{r.page_number}</button>}
-              {r.form_type && <span className="text-[10px] px-2 py-0.5 rounded bg-muted uppercase">{r.form_type}</span>}
-              {r.mandatory && <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-600 font-bold">MANDATORY</span>}
-              {r.disqualifies_if_missing && <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-destructive-foreground font-bold">DISQUALIFIES</span>}
+              {r?.page_number != null && <button className="text-[10px] px-2 py-0.5 rounded bg-brand-blue/15 text-brand-blue font-bold">p.{r.page_number}</button>}
+              {r?.form_type && <span className="text-[10px] px-2 py-0.5 rounded bg-muted uppercase">{r.form_type}</span>}
+              {r?.mandatory && <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-600 font-bold">MANDATORY</span>}
+              {r?.disqualifies_if_missing && <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-destructive-foreground font-bold">DISQUALIFIES</span>}
             </div>
           </div>
-          {r.purpose && <p className="text-xs text-muted-foreground mb-2">{r.purpose}</p>}
-          {Array.isArray(r.fields_to_complete) && r.fields_to_complete.length > 0 && (
+          {r?.purpose && <p className="text-xs text-muted-foreground mb-2">{r.purpose}</p>}
+          {Array.isArray(r?.fields_to_complete) && r.fields_to_complete.length > 0 && (
             <div className="text-xs mb-2">
               <span className="text-muted-foreground">Fields: </span>{r.fields_to_complete.join(" · ")}
             </div>
           )}
           <div className="flex gap-1.5 flex-wrap text-[10px]">
-            {r.requires_signature && <span className="px-1.5 py-0.5 rounded bg-muted">Signature</span>}
-            {r.requires_witness && <span className="px-1.5 py-0.5 rounded bg-muted">Witness</span>}
-            {r.requires_commissioner_of_oaths && <span className="px-1.5 py-0.5 rounded bg-yellow-400/20 text-yellow-700 font-bold">Commissioner of Oaths</span>}
-            {r.requires_company_stamp && <span className="px-1.5 py-0.5 rounded bg-muted">Company stamp</span>}
-            {r.requires_letterhead && <span className="px-1.5 py-0.5 rounded bg-muted">Letterhead</span>}
+            {r?.requires_signature && <span className="px-1.5 py-0.5 rounded bg-muted">Signature</span>}
+            {r?.requires_witness && <span className="px-1.5 py-0.5 rounded bg-muted">Witness</span>}
+            {r?.requires_commissioner_of_oaths && <span className="px-1.5 py-0.5 rounded bg-yellow-400/20 text-yellow-700 font-bold">Commissioner of Oaths</span>}
+            {r?.requires_company_stamp && <span className="px-1.5 py-0.5 rounded bg-muted">Company stamp</span>}
+            {r?.requires_letterhead && <span className="px-1.5 py-0.5 rounded bg-muted">Letterhead</span>}
           </div>
         </div>
       ))}
@@ -607,37 +613,40 @@ function ReturnablesTab({ master }: { master: any }) {
 }
 
 function EvaluationTab({ master }: { master: any }) {
-  const ev = master.evaluation?.evaluation_methodology ?? {};
-  const dq = master.evaluation?.disqualification_rules ?? [];
+  if (master?.evaluation?.evaluation_methodology == null) {
+    return <MissingPassCard message="Evaluation criteria were not extracted — click Retry 2C above." />;
+  }
+  const ev = master?.evaluation?.evaluation_methodology ?? {};
+  const dq: any[] = Array.isArray(master?.evaluation?.disqualification_rules) ? master.evaluation.disqualification_rules : [];
   return (
     <div className="space-y-6 max-w-4xl">
-      {ev.stage_1_administrative?.applicable && (
+      {ev?.stage_1_administrative?.applicable && (
         <Collapsible title="Stage 1 — Administrative">
           <SimpleTable headers={["Criterion", "Mandatory", "Disqualifies", "Page"]}
-            rows={(ev.stage_1_administrative.criteria ?? []).map((c: any) => [c.criterion, c.mandatory ? "Yes" : "No", c.disqualifies_if_failed ? "Yes" : "No", c.page_reference ?? "—"])} />
+            rows={(ev?.stage_1_administrative?.criteria ?? []).map((c: any) => [c?.criterion, c?.mandatory ? "Yes" : "No", c?.disqualifies_if_failed ? "Yes" : "No", c?.page_reference ?? "—"])} />
         </Collapsible>
       )}
-      {ev.stage_2_functionality?.applicable && (
-        <Collapsible title={`Stage 2 — Functionality (threshold ${ev.stage_2_functionality.minimum_threshold ?? "—"}${ev.stage_2_functionality.threshold_unit === "percentage" ? "%" : ""})`}>
+      {ev?.stage_2_functionality?.applicable && (
+        <Collapsible title={`Stage 2 — Functionality (threshold ${ev?.stage_2_functionality?.minimum_threshold ?? "—"}${ev?.stage_2_functionality?.threshold_unit === "percentage" ? "%" : ""})`}>
           <SimpleTable headers={["Criterion", "Weight", "Max Pts", "Scoring Guide", "Page"]}
-            rows={(ev.stage_2_functionality.criteria ?? []).map((c: any) => [c.criterion, c.weight ?? "—", c.maximum_points ?? "—", c.scoring_guide ?? "—", c.page_reference ?? "—"])} />
-          {ev.stage_2_functionality.below_threshold_consequence && (
+            rows={(ev?.stage_2_functionality?.criteria ?? []).map((c: any) => [c?.criterion, c?.weight ?? "—", c?.maximum_points ?? "—", c?.scoring_guide ?? "—", c?.page_reference ?? "—"])} />
+          {ev?.stage_2_functionality?.below_threshold_consequence && (
             <p className="text-xs text-destructive mt-3"><strong>Below threshold:</strong> {ev.stage_2_functionality.below_threshold_consequence}</p>
           )}
         </Collapsible>
       )}
-      {ev.stage_3_price_and_preference?.applicable && (
-        <Collapsible title={`Stage 3 — Price & Preference (${ev.stage_3_price_and_preference.pppfa_split ?? "—"})`}>
-          <p className="text-sm mb-3"><strong>{ev.stage_3_price_and_preference.price_points ?? "—"}</strong> price points + <strong>{ev.stage_3_price_and_preference.preference_points ?? "—"}</strong> preference points</p>
-          {ev.stage_3_price_and_preference.price_formula && <p className="text-xs text-muted-foreground mb-3">Formula: {ev.stage_3_price_and_preference.price_formula}</p>}
+      {ev?.stage_3_price_and_preference?.applicable && (
+        <Collapsible title={`Stage 3 — Price & Preference (${ev?.stage_3_price_and_preference?.pppfa_split ?? "—"})`}>
+          <p className="text-sm mb-3"><strong>{ev?.stage_3_price_and_preference?.price_points ?? "—"}</strong> price points + <strong>{ev?.stage_3_price_and_preference?.preference_points ?? "—"}</strong> preference points</p>
+          {ev?.stage_3_price_and_preference?.price_formula && <p className="text-xs text-muted-foreground mb-3">Formula: {ev.stage_3_price_and_preference.price_formula}</p>}
           <SimpleTable headers={["B-BBEE Level", "Points Awarded"]}
-            rows={(ev.stage_3_price_and_preference.bbbee_points_table ?? []).map((t: any) => [t.bbbee_level, t.points_awarded])} />
+            rows={(ev?.stage_3_price_and_preference?.bbbee_points_table ?? []).map((t: any) => [t?.bbbee_level, t?.points_awarded])} />
         </Collapsible>
       )}
-      {ev.stage_4_specific_goals?.applicable && (
+      {ev?.stage_4_specific_goals?.applicable && (
         <Collapsible title="Stage 4 — Specific Goals">
           <SimpleTable headers={["Goal", "Points", "Requirements", "Page"]}
-            rows={(ev.stage_4_specific_goals.goals ?? []).map((g: any) => [g.goal, g.points, g.requirements, g.page_reference])} />
+            rows={(ev?.stage_4_specific_goals?.goals ?? []).map((g: any) => [g?.goal, g?.points, g?.requirements, g?.page_reference])} />
         </Collapsible>
       )}
       {dq.length > 0 && (
@@ -645,7 +654,7 @@ function EvaluationTab({ master }: { master: any }) {
           <h3 className="text-sm font-bold text-destructive mb-2">Disqualification Rules</h3>
           <ul className="space-y-2 text-sm">
             {dq.map((r: any, i: number) => (
-              <li key={i}><strong>{r.stage}:</strong> {r.rule} <span className="text-xs text-muted-foreground">→ {r.consequence}{r.page_reference ? ` · p.${r.page_reference}` : ""}</span></li>
+              <li key={i}><strong>{r?.stage}:</strong> {r?.rule} <span className="text-xs text-muted-foreground">→ {r?.consequence}{r?.page_reference ? ` · p.${r.page_reference}` : ""}</span></li>
             ))}
           </ul>
         </div>
@@ -655,57 +664,62 @@ function EvaluationTab({ master }: { master: any }) {
 }
 
 function PricingTab({ master }: { master: any }) {
-  const p = master.pricing ?? {};
+  if (master?.pricing == null) {
+    return <MissingPassCard message="Pricing schedules were not extracted — click Retry 2D above." />;
+  }
+  const p = master?.pricing ?? {};
+  const schedules: any[] = Array.isArray(p?.pricing_schedules) ? p.pricing_schedules : [];
+  const provisional: any[] = Array.isArray(p?.provisional_sums) ? p.provisional_sums : [];
   return (
     <div className="space-y-6 max-w-5xl">
-      {p.contract_value_estimate && (
+      {p?.contract_value_estimate && (
         <div className="surface-card p-5">
           <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Contract Value Estimate</div>
           <div className="text-2xl font-extrabold">{p.contract_value_estimate}</div>
         </div>
       )}
-      {p.pricing_instructions && (
+      {p?.pricing_instructions && (
         <div className="surface-card p-4 bg-brand-blue/5 border-brand-blue/30">
           <div className="text-xs uppercase tracking-wider text-brand-blue font-bold mb-1">Pricing Instructions</div>
           <p className="text-sm">{p.pricing_instructions}</p>
         </div>
       )}
-      {(p.pricing_schedules ?? []).map((sch: any, i: number) => (
+      {schedules.map((sch: any, i: number) => (
         <div key={i} className="surface-card p-4 overflow-x-auto">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h3 className="font-bold text-sm">{sch.schedule_name} <span className="text-xs text-muted-foreground ml-2">p.{sch.page_number}</span></h3>
-            {sch.bidder_must_complete && <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-600 font-bold">BIDDER TO COMPLETE</span>}
+            <h3 className="font-bold text-sm">{sch?.schedule_name} <span className="text-xs text-muted-foreground ml-2">p.{sch?.page_number}</span></h3>
+            {sch?.bidder_must_complete && <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/15 text-orange-600 font-bold">BIDDER TO COMPLETE</span>}
           </div>
           <table className="w-full text-xs">
             <thead><tr className="text-left text-muted-foreground border-b border-border">
               <th className="py-1 pr-2">Item</th><th className="py-1 pr-2">Description</th><th className="py-1 pr-2">Unit</th><th className="py-1 pr-2">Qty</th><th className="py-1 pr-2">Rate</th><th className="py-1 pr-2">Amount</th>
             </tr></thead>
             <tbody>
-              {(sch.rows ?? []).map((r: any, j: number) => (
+              {(sch?.rows ?? []).map((r: any, j: number) => (
                 <tr key={j} className="border-b border-border/50">
-                  <td className="py-1.5 pr-2">{r.item_no}</td>
-                  <td className="py-1.5 pr-2">{r.description}</td>
-                  <td className="py-1.5 pr-2">{r.unit}</td>
-                  <td className="py-1.5 pr-2">{r.quantity}</td>
-                  <td className={`py-1.5 pr-2 ${r.rate_column === "BLANK" ? "text-muted-foreground italic" : ""}`}>{r.rate_column === "BLANK" ? "BIDDER TO COMPLETE" : r.rate_column}</td>
-                  <td className={`py-1.5 pr-2 ${r.amount_column === "BLANK" ? "text-muted-foreground italic" : ""}`}>{r.amount_column === "BLANK" ? "BIDDER TO COMPLETE" : r.amount_column}</td>
+                  <td className="py-1.5 pr-2">{r?.item_no}</td>
+                  <td className="py-1.5 pr-2">{r?.description}</td>
+                  <td className="py-1.5 pr-2">{r?.unit}</td>
+                  <td className="py-1.5 pr-2">{r?.quantity}</td>
+                  <td className={`py-1.5 pr-2 ${r?.rate_column === "BLANK" ? "text-muted-foreground italic" : ""}`}>{r?.rate_column === "BLANK" ? "BIDDER TO COMPLETE" : r?.rate_column}</td>
+                  <td className={`py-1.5 pr-2 ${r?.amount_column === "BLANK" ? "text-muted-foreground italic" : ""}`}>{r?.amount_column === "BLANK" ? "BIDDER TO COMPLETE" : r?.amount_column}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ))}
-      {p.BOQ?.present && (
+      {p?.BOQ?.present && (
         <div className="surface-card p-4">
           <h3 className="font-bold text-sm mb-2">Bill of Quantities</h3>
-          <p className="text-xs text-muted-foreground">Pages: {(p.BOQ.pages ?? []).join(", ") || "—"} · {p.BOQ.total_items ?? 0} items</p>
-          {p.BOQ.sections?.length > 0 && <ul className="text-sm mt-2 list-disc pl-5">{p.BOQ.sections.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>}
+          <p className="text-xs text-muted-foreground">Pages: {(p?.BOQ?.pages ?? []).join(", ") || "—"} · {p?.BOQ?.total_items ?? 0} items</p>
+          {Array.isArray(p?.BOQ?.sections) && p.BOQ.sections.length > 0 && <ul className="text-sm mt-2 list-disc pl-5">{p.BOQ.sections.map((s: any, i: number) => <li key={i}>{typeof s === "string" ? s : s?.section_name ?? JSON.stringify(s)}</li>)}</ul>}
         </div>
       )}
-      {(p.provisional_sums ?? []).length > 0 && (
+      {provisional.length > 0 && (
         <div className="surface-card p-4">
           <h3 className="font-bold text-sm mb-2">Provisional Sums</h3>
-          <SimpleTable headers={["Description", "Amount", "Page"]} rows={p.provisional_sums.map((s: any) => [s.description, s.amount, s.page_reference])} />
+          <SimpleTable headers={["Description", "Amount", "Page"]} rows={provisional.map((s: any) => [s?.description, s?.amount, s?.page_reference])} />
         </div>
       )}
     </div>
@@ -713,67 +727,74 @@ function PricingTab({ master }: { master: any }) {
 }
 
 function ContractTab({ master }: { master: any }) {
-  const c = master.contract ?? {};
+  if (master?.contract == null) {
+    return <MissingPassCard message="Contract terms were not extracted — click Retry 2E above." />;
+  }
+  const c = master?.contract ?? {};
+  const penalties: any[] = Array.isArray(c?.penalties_and_damages) ? c.penalties_and_damages : [];
+  const insurance: any[] = Array.isArray(c?.insurance_requirements) ? c.insurance_requirements : [];
+  const warranties: any[] = Array.isArray(c?.warranties_and_guarantees) ? c.warranties_and_guarantees : [];
+  const specials: any[] = Array.isArray(c?.special_conditions) ? c.special_conditions : [];
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="surface-card p-5">
         <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Payment Terms</h3>
         <dl className="text-sm space-y-1.5">
-          <Row k="Cycle" v={c.payment_terms?.payment_cycle} />
-          <Row k="Period (days)" v={c.payment_terms?.payment_period_days} />
-          <Row k="Retention %" v={c.payment_terms?.retention_percentage} />
-          <Row k="Retention release" v={c.payment_terms?.retention_release_conditions} />
-          <Row k="Late payment penalty" v={c.payment_terms?.penalty_for_late_payment} />
+          <Row k="Cycle" v={c?.payment_terms?.payment_cycle} />
+          <Row k="Period (days)" v={c?.payment_terms?.payment_period_days} />
+          <Row k="Retention %" v={c?.payment_terms?.retention_percentage} />
+          <Row k="Retention release" v={c?.payment_terms?.retention_release_conditions} />
+          <Row k="Late payment penalty" v={c?.payment_terms?.penalty_for_late_payment} />
         </dl>
       </div>
-      {(c.penalties_and_damages ?? []).length > 0 && (
+      {penalties.length > 0 && (
         <div className="surface-card p-4">
           <h3 className="font-bold text-sm mb-3">Penalties & Damages</h3>
-          <SimpleTable headers={["Type", "Rate", "Cap", "Trigger", "Page"]} rows={c.penalties_and_damages.map((p: any) => [p.type, p.rate, p.cap, p.trigger, p.page_reference])} />
+          <SimpleTable headers={["Type", "Rate", "Cap", "Trigger", "Page"]} rows={penalties.map((p: any) => [p?.type, p?.rate, p?.cap, p?.trigger, p?.page_reference])} />
         </div>
       )}
-      {(c.insurance_requirements ?? []).length > 0 && (
+      {insurance.length > 0 && (
         <div className="surface-card p-4">
           <h3 className="font-bold text-sm mb-3">Insurance Requirements</h3>
-          <SimpleTable headers={["Type", "Minimum Cover", "Mandatory", "Notes", "Page"]} rows={c.insurance_requirements.map((i: any) => [i.type, i.minimum_cover, i.mandatory ? "Yes" : "No", i.notes, i.page_reference])} />
+          <SimpleTable headers={["Type", "Minimum Cover", "Mandatory", "Notes", "Page"]} rows={insurance.map((i: any) => [i?.type, i?.minimum_cover, i?.mandatory ? "Yes" : "No", i?.notes, i?.page_reference])} />
         </div>
       )}
-      {c.subcontracting_rules && (
+      {c?.subcontracting_rules && (
         <div className="surface-card p-5">
           <h3 className="font-bold text-sm mb-2">Subcontracting</h3>
           <dl className="text-sm space-y-1.5">
-            <Row k="Allowed" v={c.subcontracting_rules.allowed ? "Yes" : "No"} />
-            <Row k="Max %" v={c.subcontracting_rules.maximum_percentage} />
-            <Row k="Client approval" v={c.subcontracting_rules.client_approval_required ? "Required" : "Not required"} />
+            <Row k="Allowed" v={c?.subcontracting_rules?.allowed ? "Yes" : "No"} />
+            <Row k="Max %" v={c?.subcontracting_rules?.maximum_percentage} />
+            <Row k="Client approval" v={c?.subcontracting_rules?.client_approval_required ? "Required" : "Not required"} />
           </dl>
         </div>
       )}
-      {c.termination_clauses && (
+      {c?.termination_clauses && (
         <div className="surface-card p-5">
           <h3 className="font-bold text-sm mb-2">Termination</h3>
-          <p className="text-sm mb-2">{c.termination_clauses.summary}</p>
-          <p className="text-xs text-muted-foreground">Notice period: {c.termination_clauses.notice_period ?? "—"}</p>
+          <p className="text-sm mb-2">{c?.termination_clauses?.summary}</p>
+          <p className="text-xs text-muted-foreground">Notice period: {c?.termination_clauses?.notice_period ?? "—"}</p>
         </div>
       )}
-      {c.dispute_resolution && (
+      {c?.dispute_resolution && (
         <div className="surface-card p-5">
           <h3 className="font-bold text-sm mb-2">Dispute Resolution</h3>
-          <p className="text-sm font-medium mb-1">{c.dispute_resolution.method}</p>
-          <p className="text-xs text-muted-foreground">{c.dispute_resolution.process}</p>
+          <p className="text-sm font-medium mb-1">{c?.dispute_resolution?.method}</p>
+          <p className="text-xs text-muted-foreground">{c?.dispute_resolution?.escalation_process ?? c?.dispute_resolution?.process}</p>
         </div>
       )}
-      {(c.warranties_and_guarantees ?? []).length > 0 && (
+      {warranties.length > 0 && (
         <div className="surface-card p-4">
           <h3 className="font-bold text-sm mb-3">Warranties</h3>
-          <SimpleTable headers={["Type", "Duration", "Page"]} rows={c.warranties_and_guarantees.map((w: any) => [w.type, w.duration, w.page_reference])} />
+          <SimpleTable headers={["Type", "Duration", "Page"]} rows={warranties.map((w: any) => [w?.type, w?.duration, w?.page_reference])} />
         </div>
       )}
-      {(c.special_conditions ?? []).length > 0 && (
+      {specials.length > 0 && (
         <div className="surface-card p-5">
           <h3 className="font-bold text-sm mb-2">Special Conditions</h3>
           <ul className="space-y-2 text-sm">
-            {c.special_conditions.map((s: any, i: number) => (
-              <li key={i}>• {s.condition} {s.page_reference && <span className="text-xs text-muted-foreground">· p.{s.page_reference}</span>}</li>
+            {specials.map((s: any, i: number) => (
+              <li key={i}>• {s?.condition} {s?.page_reference && <span className="text-xs text-muted-foreground">· p.{s.page_reference}</span>}</li>
             ))}
           </ul>
         </div>
@@ -783,27 +804,35 @@ function ContractTab({ master }: { master: any }) {
 }
 
 function PagesTab({ master }: { master: any }) {
-  const pages: any[] = master.page_level_intelligence ?? [];
-  const action = pages.filter((p) => p.action_required);
-  const review = pages.filter((p) => p.review_flag);
+  const pages: any[] = Array.isArray(master?.page_level_intelligence) ? master.page_level_intelligence : [];
+  if (pages.length === 0) {
+    return (
+      <div className="surface-card p-8 text-center max-w-2xl">
+        <div className="font-semibold mb-1">No page-level intelligence available</div>
+        <p className="text-sm text-muted-foreground">No pages flagged for action or manual review.</p>
+      </div>
+    );
+  }
+  const action = pages.filter((p) => p?.action_required);
+  const review = pages.filter((p) => p?.review_flag);
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="surface-card p-4">
         <h3 className="font-bold text-sm mb-3">Pages Requiring Action ({action.length})</h3>
         {action.length === 0 ? <p className="text-sm text-muted-foreground">None.</p> :
-          <SimpleTable headers={["Page", "Section", "Action", "Mandatory"]} rows={action.map((p) => [p.page, p.section_type, p.action, p.mandatory ? "Yes" : "No"])} />}
+          <SimpleTable headers={["Page", "Section", "Action", "Mandatory"]} rows={action.map((p) => [p?.page, p?.section_type, p?.action, p?.mandatory ? "Yes" : "No"])} />}
       </div>
       <div className="surface-card p-4">
         <h3 className="font-bold text-sm mb-3">Pages Requiring Manual Review ({review.length})</h3>
         {review.length === 0 ? <p className="text-sm text-muted-foreground">None.</p> :
-          <SimpleTable headers={["Page", "Section", "Reason"]} rows={review.map((p) => [p.page, p.section_type, p.review_flag])} />}
+          <SimpleTable headers={["Page", "Section", "Reason"]} rows={review.map((p) => [p?.page, p?.section_type, p?.review_flag])} />}
       </div>
     </div>
   );
 }
 
 function MissingTab({ master }: { master: any }) {
-  const m: any[] = master.missing_data ?? [];
+  const m: any[] = Array.isArray(master?.missing_data) ? master.missing_data : [];
   if (m.length === 0) return (
     <div className="surface-card p-8 text-center">
       <div className="text-success font-bold mb-2">✓ All data extracted successfully</div>
@@ -813,7 +842,7 @@ function MissingTab({ master }: { master: any }) {
   return (
     <div className="surface-card p-4 max-w-4xl">
       <p className="text-sm text-muted-foreground mb-3">{m.length} field{m.length === 1 ? "" : "s"} could not be extracted.</p>
-      <SimpleTable headers={["Field", "Source", "Page", "Reason"]} rows={m.map((x) => [x.field, x.source, x.page ?? "—", x.reason])} />
+      <SimpleTable headers={["Field", "Source", "Page", "Reason"]} rows={m.map((x) => [x?.field, x?.source, x?.page ?? "—", x?.reason])} />
     </div>
   );
 }
