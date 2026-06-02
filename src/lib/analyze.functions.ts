@@ -1208,16 +1208,7 @@ export const analyzeDocument = createServerFn({ method: "POST" })
     try {
       const { base64, mimeType } = await loadFileBase64(doc.file_path);
 
-      // ── PASS 1: TRIAGE (must succeed — routes all other passes) ──
-      let triage: any;
-      try {
-        triage = await runTriage(apiKey, base64, mimeType);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Unknown triage error";
-        throw new Error(`Document triage failed: ${msg}. Please retry.`);
-      }
-
-      // ── PASSES 2A–2E: PARALLEL with individual try/catch ──
+      // Shared tracker so we can save partial results if the overall pipeline times out.
       const passLabels = [
         "2A_submission",
         "2B_returnables",
@@ -1226,57 +1217,95 @@ export const analyzeDocument = createServerFn({ method: "POST" })
         "2E_contract",
       ] as const;
 
-      const passResults = await Promise.all([
-        runSubmission(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "submission pass failed" })),
+      let triage: any = null;
+      let triageError: string | null = null;
+      const tracker: Record<(typeof passLabels)[number], { ok: boolean | null; v?: any; err?: string }> = {
+        "2A_submission": { ok: null },
+        "2B_returnables": { ok: null },
+        "2C_evaluation": { ok: null },
+        "2D_pricing": { ok: null },
+        "2E_contract": { ok: null },
+      };
 
-        runReturnables(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "returnables pass failed" })),
+      const PIPELINE_TIMEOUT_MS = 90_000;
 
-        runEvaluation(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "evaluation pass failed" })),
+      const pipelinePromise = (async () => {
+        // ── PASS 1: TRIAGE (must succeed — routes all other passes) ──
+        try {
+          triage = await runTriage(apiKey, base64, mimeType);
+        } catch (e) {
+          triageError = e instanceof Error ? e.message : "Unknown triage error";
+          throw new Error(`Document triage failed: ${triageError}. Please retry.`);
+        }
 
-        runPricing(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "pricing pass failed" })),
+        // ── PASSES 2A–2E: PARALLEL with individual try/catch + shared tracker ──
+        await Promise.all([
+          runSubmission(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2A_submission"] = { ok: true, v }; })
+            .catch((e) => { tracker["2A_submission"] = { ok: false, err: e?.message ?? "submission pass failed" }; }),
+          runReturnables(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2B_returnables"] = { ok: true, v }; })
+            .catch((e) => { tracker["2B_returnables"] = { ok: false, err: e?.message ?? "returnables pass failed" }; }),
+          runEvaluation(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2C_evaluation"] = { ok: true, v }; })
+            .catch((e) => { tracker["2C_evaluation"] = { ok: false, err: e?.message ?? "evaluation pass failed" }; }),
+          runPricing(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2D_pricing"] = { ok: true, v }; })
+            .catch((e) => { tracker["2D_pricing"] = { ok: false, err: e?.message ?? "pricing pass failed" }; }),
+          runContract(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2E_contract"] = { ok: true, v }; })
+            .catch((e) => { tracker["2E_contract"] = { ok: false, err: e?.message ?? "contract pass failed" }; }),
+        ]);
+      })();
 
-        runContract(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "contract pass failed" })),
-      ]);
+      let timedOut = false;
+      const timeoutPromise = new Promise<void>((resolve) =>
+        setTimeout(() => { timedOut = true; resolve(); }, PIPELINE_TIMEOUT_MS)
+      );
 
-      const [subRes, retRes, evalRes, priceRes, contractRes] = passResults;
+      try {
+        await Promise.race([pipelinePromise, timeoutPromise]);
+      } catch (e) {
+        // Triage failure or other fatal error — bubble up to outer catch (which refunds + marks failed)
+        throw e;
+      }
+
+      // If triage never resolved (timeout before triage finished), treat as failure
+      if (!triage) {
+        throw new Error("Extraction timed out before document triage completed. Please retry — if this keeps happening, the document may be too complex.");
+      }
 
       const all: PassResults = {
         triage,
-        submission: subRes.ok ? subRes.v : null,
-        returnables: retRes.ok ? retRes.v : null,
-        evaluation: evalRes.ok ? evalRes.v : null,
-        pricing: priceRes.ok ? priceRes.v : null,
-        contract: contractRes.ok ? contractRes.v : null,
+        submission: tracker["2A_submission"].ok ? tracker["2A_submission"].v : null,
+        returnables: tracker["2B_returnables"].ok ? tracker["2B_returnables"].v : null,
+        evaluation: tracker["2C_evaluation"].ok ? tracker["2C_evaluation"].v : null,
+        pricing: tracker["2D_pricing"].ok ? tracker["2D_pricing"].v : null,
+        contract: tracker["2E_contract"].ok ? tracker["2E_contract"].v : null,
       };
 
       const passes_completed = [
         "1_triage",
-        ...passResults.map((p, i) => (p.ok ? passLabels[i] : null)).filter(Boolean),
-      ] as string[];
-
-      const passes_failed = passResults
-        .map((p, i) => (p.ok ? null : passLabels[i]))
-        .filter(Boolean) as string[];
+        ...passLabels.filter((l) => tracker[l].ok === true),
+      ];
+      // Anything that did not resolve as ok=true (failed OR still pending after timeout) is failed
+      const passes_failed = passLabels.filter((l) => tracker[l].ok !== true);
 
       const masterResult = assembleMasterResult(doc, all, passes_completed, passes_failed);
 
-      // Save to database
+      // If pipeline timed out, refund credits and surface partial-result note
+      let resultMessage: string | null = null;
+      if (timedOut) {
+        await refund();
+        resultMessage = "Extraction timed out — partial results shown. Retry individual sections using the buttons below.";
+      }
+
       await supabaseAdmin
         .from("documents")
         .update({
           status: "completed",
-          credits_used: CREDITS_PER_ANALYSIS,
-          error_message: null,
+          credits_used: timedOut ? 0 : CREDITS_PER_ANALYSIS,
+          error_message: resultMessage,
           triage_result: triage,
           submission_result: all.submission,
           returnables_result: all.returnables,
@@ -1299,6 +1328,7 @@ export const analyzeDocument = createServerFn({ method: "POST" })
         documentId: doc.id,
         passes_completed,
         passes_failed,
+        timedOut,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error during analysis";
