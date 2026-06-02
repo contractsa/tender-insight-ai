@@ -397,6 +397,22 @@ function DocumentDetail() {
         </div>
 
         <div className="p-4 sm:p-6 lg:p-8">
+          {master?._legacy && (
+            <div className="surface-card p-4 mb-4 border-yellow-400/50 bg-yellow-400/10">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" />
+                  <p className="text-sm text-yellow-900 dark:text-yellow-200">
+                    This document was processed with an earlier version. Re-process for full procurement intelligence.
+                  </p>
+                </div>
+                <button onClick={runAnalysis} disabled={running}
+                  className="px-3 py-1.5 rounded-lg bg-yellow-500 text-white text-xs font-bold inline-flex items-center gap-2 disabled:opacity-60">
+                  {running ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Re-Process
+                </button>
+              </div>
+            </div>
+          )}
           {(doc.extraction_failed_passes?.length ?? 0) > 0 && (
             <div className="surface-card p-4 mb-4 border-warning/40 bg-warning/5">
               <div className="flex items-center gap-2 text-warning font-semibold text-sm mb-2">
