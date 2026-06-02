@@ -1025,8 +1025,8 @@ function pagesHint(pages: any): string | undefined {
 async function runTriage(apiKey: string, base64: string, mimeType: string) {
   return callGemini({
     apiKey, prompt: PROMPT_TRIAGE, base64, mimeType,
-    model: "google/gemini-2.5-pro",
-    timeoutMs: 300_000, // triage gets extra time — it maps every page
+    model: "google/gemini-2.5-flash",
+    timeoutMs: 120_000,
   });
 }
 
