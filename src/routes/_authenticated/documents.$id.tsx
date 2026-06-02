@@ -123,6 +123,122 @@ function daysUntil(s?: string | null): number | null {
   return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
+// Format bytes safely — guards against null / 0 / undefined
+function formatBytes(bytes: any): string {
+  const n = typeof bytes === "number" ? bytes : Number(bytes);
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+// Normalise old/new result shapes into a single master_result-compatible object.
+// New shape: { triage, submission, returnables, evaluation, pricing, contract, ... }
+// Old flat shape (legacy) had: title, reference_number, closing_date, summary, key_clauses, etc.
+function normaliseMaster(doc: any): any | null {
+  if (!doc) return null;
+  const raw =
+    doc.master_result ??
+    doc.analysis_result ??
+    doc.result ??
+    doc.extraction_result ??
+    doc.ai_result ??
+    null;
+  if (!raw) return null;
+
+  const isNewShape =
+    raw.master_result || raw.triage || raw.submission || raw.procurement_summary || raw.meta;
+  if (isNewShape) return raw;
+
+  // Map legacy flat shape into nested master shape
+  const keyClauses = Array.isArray(raw.key_clauses)
+    ? raw.key_clauses.map((c: any) => (typeof c === "string" ? { condition: c, page_reference: null } : c))
+    : [];
+  const mandatoryDocs = Array.isArray(raw.mandatory_documents)
+    ? raw.mandatory_documents.map((d: any) =>
+        typeof d === "string"
+          ? { name: d, mandatory: true, disqualifies_if_missing: true }
+          : { name: d?.name ?? String(d), mandatory: true, disqualifies_if_missing: true, ...d }
+      )
+    : [];
+  const eligibility = Array.isArray(raw.eligibility_requirements) ? raw.eligibility_requirements : [];
+
+  return {
+    _legacy: true,
+    meta: {
+      extraction_version: "legacy",
+      processed_at: doc.updated_at ?? null,
+      document_name: doc.file_name,
+      passes_completed: [],
+      passes_failed: [],
+      overall_confidence: null,
+    },
+    triage: {
+      tender_title: raw.title ?? raw.tender_title ?? null,
+      reference_number: raw.reference_number ?? null,
+      issuing_entity: raw.issuing_authority ?? raw.issuing_entity ?? null,
+      document_type: raw.document_type ?? null,
+      industry_domain: raw.industry_domain ?? null,
+      total_pages: raw.total_pages ?? null,
+      estimated_complexity: raw.estimated_complexity ?? null,
+    },
+    submission: {
+      submission: {
+        closing_date: raw.closing_date ?? null,
+        closing_time: raw.closing_time ?? null,
+        physical_address: raw.contact_address ?? raw.physical_address ?? null,
+        submission_method: raw.submission_method ?? null,
+        briefing_session: {
+          date: raw.briefing_date ?? null,
+          mandatory: raw.briefing_mandatory ?? false,
+        },
+      },
+      regulatory_requirements: {
+        CIDB: { minimum_grade: raw.cidb_grade ?? null, required: !!raw.cidb_grade },
+        BBBEE: { minimum_level: raw.bbee_requirement ?? raw.bbbee_level ?? null, required: !!(raw.bbee_requirement ?? raw.bbbee_level) },
+      },
+      mandatory_compliance_documents: mandatoryDocs,
+    },
+    returnables: {
+      returnables: mandatoryDocs,
+      total_returnables_count: mandatoryDocs.length,
+      disqualifying_returnables_count: mandatoryDocs.length,
+    },
+    evaluation: {
+      evaluation_methodology: {
+        stage_3_price_and_preference: {
+          applicable: !!raw.evaluation_criteria,
+          pppfa_split: typeof raw.evaluation_criteria === "string" ? raw.evaluation_criteria : null,
+        },
+      },
+      disqualification_rules: [],
+    },
+    pricing: {
+      contract_value_estimate: raw.estimated_value ?? null,
+      pricing_schedules: [],
+    },
+    contract: {
+      contract_duration: raw.contract_duration ?? null,
+      special_conditions: keyClauses,
+    },
+    page_level_intelligence: [],
+    compliance_checklist: mandatoryDocs.map((d: any) => ({
+      name: d.name,
+      mandatory: true,
+      disqualifies_if_missing: true,
+      page: null,
+      source: "legacy",
+    })),
+    risk_flags: [],
+    missing_data: [],
+    procurement_summary: {
+      one_line: raw.summary ?? raw.title ?? "Procurement document (legacy extraction)",
+      bid_viability_factors: eligibility,
+    },
+  };
+}
+
+
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
