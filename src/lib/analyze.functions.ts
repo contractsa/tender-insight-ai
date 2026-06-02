@@ -574,56 +574,79 @@ async function callGemini(opts: {
     timeoutMs = 200_000,
   } = opts;
 
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-
   // When page hints exist, focus the model but keep the full PDF for context
   const userText = pageHint
     ? `${prompt}\n\nFOCUS PAGES: Concentrate extraction on these pages (the full PDF is attached): ${pageHint}\nNote: write page references as "Page X" format throughout.`
     : `${prompt}\n\nNote: write all page references as "Page X" format throughout.`;
 
-  try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userText },
-              {
-                type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${base64}` },
-              },
-            ],
-          },
-        ],
-      }),
-    });
+  // Exponential backoff for 429 rate-limit errors: 5s, 15s, 30s, then fail.
+  const backoffs = [5_000, 15_000, 30_000];
+  let lastErr: any = null;
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      if (res.status === 429) throw new Error("AI rate limit — please wait a moment and retry");
-      if (res.status === 402) throw new Error("AI credits exhausted");
-      if (res.status === 413) throw new Error("Document too large for AI processing");
-      throw new Error(`AI error ${res.status}: ${body.slice(0, 200)}`);
+  for (let attempt = 0; attempt <= backoffs.length; attempt++) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userText },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${mimeType};base64,${base64}` },
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      if (res.status === 429) {
+        const wait = backoffs[attempt];
+        if (wait != null) {
+          console.warn(`[callGemini] 429 rate-limited, retrying in ${wait}ms (attempt ${attempt + 1}/${backoffs.length})`);
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        throw new Error("AI rate limit reached after 3 retries — please wait 2 minutes and retry this document.");
+      }
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        if (res.status === 402) throw new Error("AI credits exhausted");
+        if (res.status === 413) throw new Error("Document too large for AI processing");
+        throw new Error(`AI error ${res.status}: ${body.slice(0, 200)}`);
+      }
+
+      const payload = await res.json();
+      const raw = payload?.choices?.[0]?.message?.content;
+      if (!raw || typeof raw !== "string") throw new Error("Empty AI response received");
+
+      return safeParseJSON(raw);
+    } catch (e: any) {
+      lastErr = e;
+      // Abort/timeout or non-retryable — re-throw immediately
+      if (e?.name === "AbortError") throw new Error(`AI request timed out after ${Math.round(timeoutMs / 1000)}s`);
+      if (!String(e?.message ?? "").includes("rate limit")) throw e;
+      // rate-limit path: loop continues if attempts remain
+      if (attempt >= backoffs.length) throw e;
+    } finally {
+      clearTimeout(t);
     }
-
-    const payload = await res.json();
-    const raw = payload?.choices?.[0]?.message?.content;
-    if (!raw || typeof raw !== "string") throw new Error("Empty AI response received");
-
-    return safeParseJSON(raw);
-  } finally {
-    clearTimeout(t);
   }
+
+  throw lastErr ?? new Error("AI request failed");
 }
 
 // ============================================================
