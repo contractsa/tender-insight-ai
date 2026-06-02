@@ -1159,14 +1159,23 @@ export const analyzeDocument = createServerFn({ method: "POST" })
     if (!doc) throw new Error("Document not found");
     if (doc.user_id !== userId) throw new Error("Forbidden");
 
-    // Return cached result if already analysed
+    // Return cached result if already analysed (force=true would re-run, but we don't support that yet)
     if ((doc as any).master_result) {
       return { success: true, documentId: doc.id, alreadyAnalysed: true };
     }
 
-    // Prevent double processing
+    // Prevent double processing — but auto-recover stale jobs (>5min) so the user can retry.
     if (doc.status === "processing") {
-      throw new Error("This document is already being analysed. Please wait.");
+      const updatedAt = doc.updated_at ? new Date(doc.updated_at).getTime() : 0;
+      const stale = Date.now() - updatedAt > 5 * 60 * 1000;
+      if (!stale) {
+        throw new Error("This document is already being analysed. Please wait.");
+      }
+      // Reset so we can start fresh
+      await supabaseAdmin
+        .from("documents")
+        .update({ status: "failed", error_message: "Previous run timed out — retrying" })
+        .eq("id", doc.id);
     }
 
     // Reserve credits
