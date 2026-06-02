@@ -186,18 +186,28 @@ function DocumentDetail() {
   if (!data?.doc) return <div className="p-8">Not found</div>;
 
   const doc = data.doc as any;
-  const isProcessing = doc.status === "processing" || running;
-  const master = doc.master_result;
+
+  // Detect stale processing (>5 min) — show as failed so user can retry instead of infinite spinner
+  const updatedAtMs = doc.updated_at ? new Date(doc.updated_at).getTime() : 0;
+  const isStaleProcessing = doc.status === "processing" && Date.now() - updatedAtMs > 5 * 60 * 1000;
+  const isProcessing = (doc.status === "processing" && !isStaleProcessing) || running;
+
+  // Normalise result across schema versions: master_result (current), analysis_result/result/extraction_result/ai_result (legacy)
+  const master = normaliseMaster(doc);
 
   // Pre-analysis states
   if (!master) {
+    const failed = doc.status === "failed" || isStaleProcessing;
+    const failureMessage = isStaleProcessing
+      ? "Processing timed out — please retry"
+      : doc.error_message || "Unknown error";
     return (
       <div className="p-4 sm:p-8 max-w-3xl mx-auto">
         <Link to="/documents" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-5">
           <ArrowLeft className="w-4 h-4" /> Back to documents
         </Link>
         <h1 className="text-xl font-extrabold break-words mb-1">{doc.file_name}</h1>
-        <p className="text-sm text-muted-foreground mb-6">{new Date(doc.created_at).toLocaleString()} · {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
+        <p className="text-sm text-muted-foreground mb-6">{new Date(doc.created_at).toLocaleString()} · {formatBytes(doc.file_size)}</p>
 
         {isProcessing && (
           <div className="surface-card p-8 text-center">
@@ -214,12 +224,12 @@ function DocumentDetail() {
             </button>
           </div>
         )}
-        {doc.status === "failed" && (
+        {failed && (
           <div className="surface-card p-5 border-destructive/30 bg-destructive/5">
             <div className="flex items-center gap-2 text-destructive font-semibold text-sm mb-1">
               <AlertTriangle className="w-4 h-4" /> Analysis failed
             </div>
-            <p className="text-sm text-muted-foreground mb-3">{doc.error_message || "Unknown error"}</p>
+            <p className="text-sm text-muted-foreground mb-3">{failureMessage}</p>
             <button onClick={runAnalysis} disabled={running} className="px-4 py-2 rounded-lg border border-border text-sm inline-flex items-center gap-2 hover:border-brand-blue hover:text-brand-blue disabled:opacity-60">
               {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Retry analysis
             </button>
