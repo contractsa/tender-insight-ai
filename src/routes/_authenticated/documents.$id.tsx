@@ -123,6 +123,122 @@ function daysUntil(s?: string | null): number | null {
   return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
+// Format bytes safely — guards against null / 0 / undefined
+function formatBytes(bytes: any): string {
+  const n = typeof bytes === "number" ? bytes : Number(bytes);
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+// Normalise old/new result shapes into a single master_result-compatible object.
+// New shape: { triage, submission, returnables, evaluation, pricing, contract, ... }
+// Old flat shape (legacy) had: title, reference_number, closing_date, summary, key_clauses, etc.
+function normaliseMaster(doc: any): any | null {
+  if (!doc) return null;
+  const raw =
+    doc.master_result ??
+    doc.analysis_result ??
+    doc.result ??
+    doc.extraction_result ??
+    doc.ai_result ??
+    null;
+  if (!raw) return null;
+
+  const isNewShape =
+    raw.master_result || raw.triage || raw.submission || raw.procurement_summary || raw.meta;
+  if (isNewShape) return raw;
+
+  // Map legacy flat shape into nested master shape
+  const keyClauses = Array.isArray(raw.key_clauses)
+    ? raw.key_clauses.map((c: any) => (typeof c === "string" ? { condition: c, page_reference: null } : c))
+    : [];
+  const mandatoryDocs = Array.isArray(raw.mandatory_documents)
+    ? raw.mandatory_documents.map((d: any) =>
+        typeof d === "string"
+          ? { name: d, mandatory: true, disqualifies_if_missing: true }
+          : { name: d?.name ?? String(d), mandatory: true, disqualifies_if_missing: true, ...d }
+      )
+    : [];
+  const eligibility = Array.isArray(raw.eligibility_requirements) ? raw.eligibility_requirements : [];
+
+  return {
+    _legacy: true,
+    meta: {
+      extraction_version: "legacy",
+      processed_at: doc.updated_at ?? null,
+      document_name: doc.file_name,
+      passes_completed: [],
+      passes_failed: [],
+      overall_confidence: null,
+    },
+    triage: {
+      tender_title: raw.title ?? raw.tender_title ?? null,
+      reference_number: raw.reference_number ?? null,
+      issuing_entity: raw.issuing_authority ?? raw.issuing_entity ?? null,
+      document_type: raw.document_type ?? null,
+      industry_domain: raw.industry_domain ?? null,
+      total_pages: raw.total_pages ?? null,
+      estimated_complexity: raw.estimated_complexity ?? null,
+    },
+    submission: {
+      submission: {
+        closing_date: raw.closing_date ?? null,
+        closing_time: raw.closing_time ?? null,
+        physical_address: raw.contact_address ?? raw.physical_address ?? null,
+        submission_method: raw.submission_method ?? null,
+        briefing_session: {
+          date: raw.briefing_date ?? null,
+          mandatory: raw.briefing_mandatory ?? false,
+        },
+      },
+      regulatory_requirements: {
+        CIDB: { minimum_grade: raw.cidb_grade ?? null, required: !!raw.cidb_grade },
+        BBBEE: { minimum_level: raw.bbee_requirement ?? raw.bbbee_level ?? null, required: !!(raw.bbee_requirement ?? raw.bbbee_level) },
+      },
+      mandatory_compliance_documents: mandatoryDocs,
+    },
+    returnables: {
+      returnables: mandatoryDocs,
+      total_returnables_count: mandatoryDocs.length,
+      disqualifying_returnables_count: mandatoryDocs.length,
+    },
+    evaluation: {
+      evaluation_methodology: {
+        stage_3_price_and_preference: {
+          applicable: !!raw.evaluation_criteria,
+          pppfa_split: typeof raw.evaluation_criteria === "string" ? raw.evaluation_criteria : null,
+        },
+      },
+      disqualification_rules: [],
+    },
+    pricing: {
+      contract_value_estimate: raw.estimated_value ?? null,
+      pricing_schedules: [],
+    },
+    contract: {
+      contract_duration: raw.contract_duration ?? null,
+      special_conditions: keyClauses,
+    },
+    page_level_intelligence: [],
+    compliance_checklist: mandatoryDocs.map((d: any) => ({
+      name: d.name,
+      mandatory: true,
+      disqualifies_if_missing: true,
+      page: null,
+      source: "legacy",
+    })),
+    risk_flags: [],
+    missing_data: [],
+    procurement_summary: {
+      one_line: raw.summary ?? raw.title ?? "Procurement document (legacy extraction)",
+      bid_viability_factors: eligibility,
+    },
+  };
+}
+
+
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
@@ -186,18 +302,28 @@ function DocumentDetail() {
   if (!data?.doc) return <div className="p-8">Not found</div>;
 
   const doc = data.doc as any;
-  const isProcessing = doc.status === "processing" || running;
-  const master = doc.master_result;
+
+  // Detect stale processing (>5 min) — show as failed so user can retry instead of infinite spinner
+  const updatedAtMs = doc.updated_at ? new Date(doc.updated_at).getTime() : 0;
+  const isStaleProcessing = doc.status === "processing" && Date.now() - updatedAtMs > 5 * 60 * 1000;
+  const isProcessing = (doc.status === "processing" && !isStaleProcessing) || running;
+
+  // Normalise result across schema versions: master_result (current), analysis_result/result/extraction_result/ai_result (legacy)
+  const master = normaliseMaster(doc);
 
   // Pre-analysis states
   if (!master) {
+    const failed = doc.status === "failed" || isStaleProcessing;
+    const failureMessage = isStaleProcessing
+      ? "Processing timed out — please retry"
+      : doc.error_message || "Unknown error";
     return (
       <div className="p-4 sm:p-8 max-w-3xl mx-auto">
         <Link to="/documents" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-5">
           <ArrowLeft className="w-4 h-4" /> Back to documents
         </Link>
         <h1 className="text-xl font-extrabold break-words mb-1">{doc.file_name}</h1>
-        <p className="text-sm text-muted-foreground mb-6">{new Date(doc.created_at).toLocaleString()} · {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
+        <p className="text-sm text-muted-foreground mb-6">{new Date(doc.created_at).toLocaleString()} · {formatBytes(doc.file_size)}</p>
 
         {isProcessing && (
           <div className="surface-card p-8 text-center">
@@ -214,12 +340,12 @@ function DocumentDetail() {
             </button>
           </div>
         )}
-        {doc.status === "failed" && (
+        {failed && (
           <div className="surface-card p-5 border-destructive/30 bg-destructive/5">
             <div className="flex items-center gap-2 text-destructive font-semibold text-sm mb-1">
               <AlertTriangle className="w-4 h-4" /> Analysis failed
             </div>
-            <p className="text-sm text-muted-foreground mb-3">{doc.error_message || "Unknown error"}</p>
+            <p className="text-sm text-muted-foreground mb-3">{failureMessage}</p>
             <button onClick={runAnalysis} disabled={running} className="px-4 py-2 rounded-lg border border-border text-sm inline-flex items-center gap-2 hover:border-brand-blue hover:text-brand-blue disabled:opacity-60">
               {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Retry analysis
             </button>
@@ -271,6 +397,22 @@ function DocumentDetail() {
         </div>
 
         <div className="p-4 sm:p-6 lg:p-8">
+          {master?._legacy && (
+            <div className="surface-card p-4 mb-4 border-yellow-400/50 bg-yellow-400/10">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" />
+                  <p className="text-sm text-yellow-900 dark:text-yellow-200">
+                    This document was processed with an earlier version. Re-process for full procurement intelligence.
+                  </p>
+                </div>
+                <button onClick={runAnalysis} disabled={running}
+                  className="px-3 py-1.5 rounded-lg bg-yellow-500 text-white text-xs font-bold inline-flex items-center gap-2 disabled:opacity-60">
+                  {running ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Re-Process
+                </button>
+              </div>
+            </div>
+          )}
           {(doc.extraction_failed_passes?.length ?? 0) > 0 && (
             <div className="surface-card p-4 mb-4 border-warning/40 bg-warning/5">
               <div className="flex items-center gap-2 text-warning font-semibold text-sm mb-2">

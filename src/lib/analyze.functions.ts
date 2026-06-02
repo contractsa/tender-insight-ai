@@ -574,56 +574,79 @@ async function callGemini(opts: {
     timeoutMs = 200_000,
   } = opts;
 
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-
   // When page hints exist, focus the model but keep the full PDF for context
   const userText = pageHint
     ? `${prompt}\n\nFOCUS PAGES: Concentrate extraction on these pages (the full PDF is attached): ${pageHint}\nNote: write page references as "Page X" format throughout.`
     : `${prompt}\n\nNote: write all page references as "Page X" format throughout.`;
 
-  try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userText },
-              {
-                type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${base64}` },
-              },
-            ],
-          },
-        ],
-      }),
-    });
+  // Exponential backoff for 429 rate-limit errors: 5s, 15s, 30s, then fail.
+  const backoffs = [5_000, 15_000, 30_000];
+  let lastErr: any = null;
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      if (res.status === 429) throw new Error("AI rate limit — please wait a moment and retry");
-      if (res.status === 402) throw new Error("AI credits exhausted");
-      if (res.status === 413) throw new Error("Document too large for AI processing");
-      throw new Error(`AI error ${res.status}: ${body.slice(0, 200)}`);
+  for (let attempt = 0; attempt <= backoffs.length; attempt++) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userText },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${mimeType};base64,${base64}` },
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      if (res.status === 429) {
+        const wait = backoffs[attempt];
+        if (wait != null) {
+          console.warn(`[callGemini] 429 rate-limited, retrying in ${wait}ms (attempt ${attempt + 1}/${backoffs.length})`);
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        throw new Error("AI rate limit reached after 3 retries — please wait 2 minutes and retry this document.");
+      }
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        if (res.status === 402) throw new Error("AI credits exhausted");
+        if (res.status === 413) throw new Error("Document too large for AI processing");
+        throw new Error(`AI error ${res.status}: ${body.slice(0, 200)}`);
+      }
+
+      const payload = await res.json();
+      const raw = payload?.choices?.[0]?.message?.content;
+      if (!raw || typeof raw !== "string") throw new Error("Empty AI response received");
+
+      return safeParseJSON(raw);
+    } catch (e: any) {
+      lastErr = e;
+      // Abort/timeout or non-retryable — re-throw immediately
+      if (e?.name === "AbortError") throw new Error(`AI request timed out after ${Math.round(timeoutMs / 1000)}s`);
+      if (!String(e?.message ?? "").includes("rate limit")) throw e;
+      // rate-limit path: loop continues if attempts remain
+      if (attempt >= backoffs.length) throw e;
+    } finally {
+      clearTimeout(t);
     }
-
-    const payload = await res.json();
-    const raw = payload?.choices?.[0]?.message?.content;
-    if (!raw || typeof raw !== "string") throw new Error("Empty AI response received");
-
-    return safeParseJSON(raw);
-  } finally {
-    clearTimeout(t);
   }
+
+  throw lastErr ?? new Error("AI request failed");
 }
 
 // ============================================================
@@ -1002,8 +1025,8 @@ function pagesHint(pages: any): string | undefined {
 async function runTriage(apiKey: string, base64: string, mimeType: string) {
   return callGemini({
     apiKey, prompt: PROMPT_TRIAGE, base64, mimeType,
-    model: "google/gemini-2.5-pro",
-    timeoutMs: 300_000, // triage gets extra time — it maps every page
+    model: "google/gemini-2.5-flash",
+    timeoutMs: 120_000,
   });
 }
 
@@ -1136,14 +1159,23 @@ export const analyzeDocument = createServerFn({ method: "POST" })
     if (!doc) throw new Error("Document not found");
     if (doc.user_id !== userId) throw new Error("Forbidden");
 
-    // Return cached result if already analysed
+    // Return cached result if already analysed (force=true would re-run, but we don't support that yet)
     if ((doc as any).master_result) {
       return { success: true, documentId: doc.id, alreadyAnalysed: true };
     }
 
-    // Prevent double processing
+    // Prevent double processing — but auto-recover stale jobs (>5min) so the user can retry.
     if (doc.status === "processing") {
-      throw new Error("This document is already being analysed. Please wait.");
+      const updatedAt = doc.updated_at ? new Date(doc.updated_at).getTime() : 0;
+      const stale = Date.now() - updatedAt > 5 * 60 * 1000;
+      if (!stale) {
+        throw new Error("This document is already being analysed. Please wait.");
+      }
+      // Reset so we can start fresh
+      await supabaseAdmin
+        .from("documents")
+        .update({ status: "failed", error_message: "Previous run timed out — retrying" })
+        .eq("id", doc.id);
     }
 
     // Reserve credits
@@ -1176,16 +1208,7 @@ export const analyzeDocument = createServerFn({ method: "POST" })
     try {
       const { base64, mimeType } = await loadFileBase64(doc.file_path);
 
-      // ── PASS 1: TRIAGE (must succeed — routes all other passes) ──
-      let triage: any;
-      try {
-        triage = await runTriage(apiKey, base64, mimeType);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Unknown triage error";
-        throw new Error(`Document triage failed: ${msg}. Please retry.`);
-      }
-
-      // ── PASSES 2A–2E: PARALLEL with individual try/catch ──
+      // Shared tracker so we can save partial results if the overall pipeline times out.
       const passLabels = [
         "2A_submission",
         "2B_returnables",
@@ -1194,57 +1217,95 @@ export const analyzeDocument = createServerFn({ method: "POST" })
         "2E_contract",
       ] as const;
 
-      const passResults = await Promise.all([
-        runSubmission(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "submission pass failed" })),
+      let triage: any = null;
+      let triageError: string | null = null;
+      const tracker: Record<(typeof passLabels)[number], { ok: boolean | null; v?: any; err?: string }> = {
+        "2A_submission": { ok: null },
+        "2B_returnables": { ok: null },
+        "2C_evaluation": { ok: null },
+        "2D_pricing": { ok: null },
+        "2E_contract": { ok: null },
+      };
 
-        runReturnables(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "returnables pass failed" })),
+      const PIPELINE_TIMEOUT_MS = 90_000;
 
-        runEvaluation(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "evaluation pass failed" })),
+      const pipelinePromise = (async () => {
+        // ── PASS 1: TRIAGE (must succeed — routes all other passes) ──
+        try {
+          triage = await runTriage(apiKey, base64, mimeType);
+        } catch (e) {
+          triageError = e instanceof Error ? e.message : "Unknown triage error";
+          throw new Error(`Document triage failed: ${triageError}. Please retry.`);
+        }
 
-        runPricing(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "pricing pass failed" })),
+        // ── PASSES 2A–2E: PARALLEL with individual try/catch + shared tracker ──
+        await Promise.all([
+          runSubmission(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2A_submission"] = { ok: true, v }; })
+            .catch((e) => { tracker["2A_submission"] = { ok: false, err: e?.message ?? "submission pass failed" }; }),
+          runReturnables(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2B_returnables"] = { ok: true, v }; })
+            .catch((e) => { tracker["2B_returnables"] = { ok: false, err: e?.message ?? "returnables pass failed" }; }),
+          runEvaluation(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2C_evaluation"] = { ok: true, v }; })
+            .catch((e) => { tracker["2C_evaluation"] = { ok: false, err: e?.message ?? "evaluation pass failed" }; }),
+          runPricing(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2D_pricing"] = { ok: true, v }; })
+            .catch((e) => { tracker["2D_pricing"] = { ok: false, err: e?.message ?? "pricing pass failed" }; }),
+          runContract(apiKey, base64, mimeType, triage)
+            .then((v) => { tracker["2E_contract"] = { ok: true, v }; })
+            .catch((e) => { tracker["2E_contract"] = { ok: false, err: e?.message ?? "contract pass failed" }; }),
+        ]);
+      })();
 
-        runContract(apiKey, base64, mimeType, triage)
-          .then((v) => ({ ok: true as const, v }))
-          .catch((e) => ({ ok: false as const, e: e?.message ?? "contract pass failed" })),
-      ]);
+      let timedOut = false;
+      const timeoutPromise = new Promise<void>((resolve) =>
+        setTimeout(() => { timedOut = true; resolve(); }, PIPELINE_TIMEOUT_MS)
+      );
 
-      const [subRes, retRes, evalRes, priceRes, contractRes] = passResults;
+      try {
+        await Promise.race([pipelinePromise, timeoutPromise]);
+      } catch (e) {
+        // Triage failure or other fatal error — bubble up to outer catch (which refunds + marks failed)
+        throw e;
+      }
+
+      // If triage never resolved (timeout before triage finished), treat as failure
+      if (!triage) {
+        throw new Error("Extraction timed out before document triage completed. Please retry — if this keeps happening, the document may be too complex.");
+      }
 
       const all: PassResults = {
         triage,
-        submission: subRes.ok ? subRes.v : null,
-        returnables: retRes.ok ? retRes.v : null,
-        evaluation: evalRes.ok ? evalRes.v : null,
-        pricing: priceRes.ok ? priceRes.v : null,
-        contract: contractRes.ok ? contractRes.v : null,
+        submission: tracker["2A_submission"].ok ? tracker["2A_submission"].v : null,
+        returnables: tracker["2B_returnables"].ok ? tracker["2B_returnables"].v : null,
+        evaluation: tracker["2C_evaluation"].ok ? tracker["2C_evaluation"].v : null,
+        pricing: tracker["2D_pricing"].ok ? tracker["2D_pricing"].v : null,
+        contract: tracker["2E_contract"].ok ? tracker["2E_contract"].v : null,
       };
 
       const passes_completed = [
         "1_triage",
-        ...passResults.map((p, i) => (p.ok ? passLabels[i] : null)).filter(Boolean),
-      ] as string[];
-
-      const passes_failed = passResults
-        .map((p, i) => (p.ok ? null : passLabels[i]))
-        .filter(Boolean) as string[];
+        ...passLabels.filter((l) => tracker[l].ok === true),
+      ];
+      // Anything that did not resolve as ok=true (failed OR still pending after timeout) is failed
+      const passes_failed = passLabels.filter((l) => tracker[l].ok !== true);
 
       const masterResult = assembleMasterResult(doc, all, passes_completed, passes_failed);
 
-      // Save to database
+      // If pipeline timed out, refund credits and surface partial-result note
+      let resultMessage: string | null = null;
+      if (timedOut) {
+        await refund();
+        resultMessage = "Extraction timed out — partial results shown. Retry individual sections using the buttons below.";
+      }
+
       await supabaseAdmin
         .from("documents")
         .update({
           status: "completed",
-          credits_used: CREDITS_PER_ANALYSIS,
-          error_message: null,
+          credits_used: timedOut ? 0 : CREDITS_PER_ANALYSIS,
+          error_message: resultMessage,
           triage_result: triage,
           submission_result: all.submission,
           returnables_result: all.returnables,
@@ -1267,6 +1328,7 @@ export const analyzeDocument = createServerFn({ method: "POST" })
         documentId: doc.id,
         passes_completed,
         passes_failed,
+        timedOut,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error during analysis";
