@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
+import { Route as AuthenticatedEligibilityRouteImport } from './routes/_authenticated/eligibility'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCompanyProfileRouteImport } from './routes/_authenticated/company-profile'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
@@ -50,6 +51,12 @@ const AuthenticatedUploadRoute = AuthenticatedUploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedEligibilityRoute =
+  AuthenticatedEligibilityRouteImport.update({
+    id: '/eligibility',
+    path: '/eligibility',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AuthenticatedAccountRoute
   '/company-profile': typeof AuthenticatedCompanyProfileRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/eligibility': typeof AuthenticatedEligibilityRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/documents/$id': typeof AuthenticatedDocumentsIdRoute
   '/documents/': typeof AuthenticatedDocumentsIndexRoute
@@ -99,6 +107,7 @@ export interface FileRoutesByTo {
   '/account': typeof AuthenticatedAccountRoute
   '/company-profile': typeof AuthenticatedCompanyProfileRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/eligibility': typeof AuthenticatedEligibilityRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/documents/$id': typeof AuthenticatedDocumentsIdRoute
   '/documents': typeof AuthenticatedDocumentsIndexRoute
@@ -113,6 +122,7 @@ export interface FileRoutesById {
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/company-profile': typeof AuthenticatedCompanyProfileRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/eligibility': typeof AuthenticatedEligibilityRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/documents/$id': typeof AuthenticatedDocumentsIdRoute
   '/_authenticated/documents/': typeof AuthenticatedDocumentsIndexRoute
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/company-profile'
     | '/dashboard'
+    | '/eligibility'
     | '/upload'
     | '/documents/$id'
     | '/documents/'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/company-profile'
     | '/dashboard'
+    | '/eligibility'
     | '/upload'
     | '/documents/$id'
     | '/documents'
@@ -152,6 +164,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account'
     | '/_authenticated/company-profile'
     | '/_authenticated/dashboard'
+    | '/_authenticated/eligibility'
     | '/_authenticated/upload'
     | '/_authenticated/documents/$id'
     | '/_authenticated/documents/'
@@ -209,6 +222,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUploadRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/eligibility': {
+      id: '/_authenticated/eligibility'
+      path: '/eligibility'
+      fullPath: '/eligibility'
+      preLoaderRoute: typeof AuthenticatedEligibilityRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -251,6 +271,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
   AuthenticatedCompanyProfileRoute: typeof AuthenticatedCompanyProfileRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEligibilityRoute: typeof AuthenticatedEligibilityRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
   AuthenticatedDocumentsIdRoute: typeof AuthenticatedDocumentsIdRoute
   AuthenticatedDocumentsIndexRoute: typeof AuthenticatedDocumentsIndexRoute
@@ -260,6 +281,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
   AuthenticatedCompanyProfileRoute: AuthenticatedCompanyProfileRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEligibilityRoute: AuthenticatedEligibilityRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
   AuthenticatedDocumentsIdRoute: AuthenticatedDocumentsIdRoute,
   AuthenticatedDocumentsIndexRoute: AuthenticatedDocumentsIndexRoute,
