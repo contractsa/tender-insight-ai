@@ -33,8 +33,18 @@ function AuthenticatedLayout() {
 
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/upload", label: "Upload", icon: Upload },
+    { to: "/upload", label: "Upload Documents", icon: Upload },
     { to: "/documents", label: "Documents", icon: FileText },
+    { to: "/company-profile", label: "Company Profile", icon: Building2 },
+    { to: "/eligibility", label: "Eligibility", icon: ClipboardCheck },
+    { to: "/submission-pack", label: "Submission Pack", icon: PackageCheck },
+    { to: "/monitoring", label: "Monitored Tenders", icon: Radar },
+    { to: "/pricing", label: "Pricing", icon: CreditCard },
+    { to: "/how-it-works", label: "How It Works", icon: HelpCircle },
+    { to: "/about", label: "About", icon: Info },
+    { to: "/privacy", label: "Privacy", icon: Shield },
+    { to: "/popia", label: "POPIA", icon: FileCheck },
+    { to: "/terms", label: "Terms", icon: ScrollText },
     { to: "/account", label: "Account", icon: User },
   ];
 
