@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useLocation } from "@tansta
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { LogoLockup } from "@/components/Logo";
-import { LayoutDashboard, Upload, FileText, User, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Upload, FileText, User, LogOut, Menu, X, Building2, ClipboardCheck, PackageCheck, Radar, CreditCard, HelpCircle, Info, Shield, ScrollText, FileCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
