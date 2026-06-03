@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      company_profiles: {
+        Row: {
+          bbbee_certificate_type: string | null
+          bbbee_level: string | null
+          business_structure: string | null
+          capabilities: Json
+          cidb_designation: string | null
+          cidb_grade: string | null
+          created_at: string
+          directors: Json
+          id: string
+          legal_name: string | null
+          professional_registrations: Json
+          registration_number: string | null
+          tax_compliance_status: string | null
+          updated_at: string
+          user_id: string
+          vat_number: string | null
+        }
+        Insert: {
+          bbbee_certificate_type?: string | null
+          bbbee_level?: string | null
+          business_structure?: string | null
+          capabilities?: Json
+          cidb_designation?: string | null
+          cidb_grade?: string | null
+          created_at?: string
+          directors?: Json
+          id?: string
+          legal_name?: string | null
+          professional_registrations?: Json
+          registration_number?: string | null
+          tax_compliance_status?: string | null
+          updated_at?: string
+          user_id: string
+          vat_number?: string | null
+        }
+        Update: {
+          bbbee_certificate_type?: string | null
+          bbbee_level?: string | null
+          business_structure?: string | null
+          capabilities?: Json
+          cidb_designation?: string | null
+          cidb_grade?: string | null
+          created_at?: string
+          directors?: Json
+          id?: string
+          legal_name?: string | null
+          professional_registrations?: Json
+          registration_number?: string | null
+          tax_compliance_status?: string | null
+          updated_at?: string
+          user_id?: string
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           compliance_checklist: Json | null
@@ -28,6 +85,7 @@ export type Database = {
           file_name: string
           file_path: string
           file_size: number
+          file_size_bytes: number | null
           id: string
           master_result: Json | null
           mime_type: string | null
@@ -55,6 +113,7 @@ export type Database = {
           file_name: string
           file_path: string
           file_size: number
+          file_size_bytes?: number | null
           id?: string
           master_result?: Json | null
           mime_type?: string | null
@@ -82,6 +141,7 @@ export type Database = {
           file_name?: string
           file_path?: string
           file_size?: number
+          file_size_bytes?: number | null
           id?: string
           master_result?: Json | null
           mime_type?: string | null
@@ -93,6 +153,57 @@ export type Database = {
           status?: string
           submission_result?: Json | null
           triage_result?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      monitored_tenders: {
+        Row: {
+          alert_sent: boolean
+          changes_detected: Json
+          closing_date: string | null
+          closing_time: string | null
+          created_at: string
+          document_id: string | null
+          id: string
+          last_checked: string | null
+          source_url: string | null
+          status: string
+          tender_reference: string | null
+          tender_title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_sent?: boolean
+          changes_detected?: Json
+          closing_date?: string | null
+          closing_time?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          last_checked?: string | null
+          source_url?: string | null
+          status?: string
+          tender_reference?: string | null
+          tender_title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_sent?: boolean
+          changes_detected?: Json
+          closing_date?: string | null
+          closing_time?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          last_checked?: string | null
+          source_url?: string | null
+          status?: string
+          tender_reference?: string | null
+          tender_title?: string | null
           updated_at?: string
           user_id?: string
         }
