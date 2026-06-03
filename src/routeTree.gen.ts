@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
+import { Route as AuthenticatedSubmissionPackRouteImport } from './routes/_authenticated/submission-pack'
 import { Route as AuthenticatedEligibilityRouteImport } from './routes/_authenticated/eligibility'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCompanyProfileRouteImport } from './routes/_authenticated/company-profile'
@@ -51,6 +52,12 @@ const AuthenticatedUploadRoute = AuthenticatedUploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSubmissionPackRoute =
+  AuthenticatedSubmissionPackRouteImport.update({
+    id: '/submission-pack',
+    path: '/submission-pack',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedEligibilityRoute =
   AuthenticatedEligibilityRouteImport.update({
     id: '/eligibility',
@@ -95,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/company-profile': typeof AuthenticatedCompanyProfileRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eligibility': typeof AuthenticatedEligibilityRoute
+  '/submission-pack': typeof AuthenticatedSubmissionPackRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/documents/$id': typeof AuthenticatedDocumentsIdRoute
   '/documents/': typeof AuthenticatedDocumentsIndexRoute
@@ -108,6 +116,7 @@ export interface FileRoutesByTo {
   '/company-profile': typeof AuthenticatedCompanyProfileRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/eligibility': typeof AuthenticatedEligibilityRoute
+  '/submission-pack': typeof AuthenticatedSubmissionPackRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/documents/$id': typeof AuthenticatedDocumentsIdRoute
   '/documents': typeof AuthenticatedDocumentsIndexRoute
@@ -123,6 +132,7 @@ export interface FileRoutesById {
   '/_authenticated/company-profile': typeof AuthenticatedCompanyProfileRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/eligibility': typeof AuthenticatedEligibilityRoute
+  '/_authenticated/submission-pack': typeof AuthenticatedSubmissionPackRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/documents/$id': typeof AuthenticatedDocumentsIdRoute
   '/_authenticated/documents/': typeof AuthenticatedDocumentsIndexRoute
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/company-profile'
     | '/dashboard'
     | '/eligibility'
+    | '/submission-pack'
     | '/upload'
     | '/documents/$id'
     | '/documents/'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/company-profile'
     | '/dashboard'
     | '/eligibility'
+    | '/submission-pack'
     | '/upload'
     | '/documents/$id'
     | '/documents'
@@ -165,6 +177,7 @@ export interface FileRouteTypes {
     | '/_authenticated/company-profile'
     | '/_authenticated/dashboard'
     | '/_authenticated/eligibility'
+    | '/_authenticated/submission-pack'
     | '/_authenticated/upload'
     | '/_authenticated/documents/$id'
     | '/_authenticated/documents/'
@@ -222,6 +235,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUploadRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/submission-pack': {
+      id: '/_authenticated/submission-pack'
+      path: '/submission-pack'
+      fullPath: '/submission-pack'
+      preLoaderRoute: typeof AuthenticatedSubmissionPackRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/eligibility': {
       id: '/_authenticated/eligibility'
       path: '/eligibility'
@@ -272,6 +292,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCompanyProfileRoute: typeof AuthenticatedCompanyProfileRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEligibilityRoute: typeof AuthenticatedEligibilityRoute
+  AuthenticatedSubmissionPackRoute: typeof AuthenticatedSubmissionPackRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
   AuthenticatedDocumentsIdRoute: typeof AuthenticatedDocumentsIdRoute
   AuthenticatedDocumentsIndexRoute: typeof AuthenticatedDocumentsIndexRoute
@@ -282,6 +303,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCompanyProfileRoute: AuthenticatedCompanyProfileRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEligibilityRoute: AuthenticatedEligibilityRoute,
+  AuthenticatedSubmissionPackRoute: AuthenticatedSubmissionPackRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
   AuthenticatedDocumentsIdRoute: AuthenticatedDocumentsIdRoute,
   AuthenticatedDocumentsIndexRoute: AuthenticatedDocumentsIndexRoute,
