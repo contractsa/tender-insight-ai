@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PopiaRouteImport } from './routes/popia'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as AboutRouteImport } from './routes/about'
@@ -40,6 +41,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PopiaRoute = PopiaRouteImport.update({
+  id: '/popia',
+  path: '/popia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/popia': typeof PopiaRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/popia': typeof PopiaRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/popia': typeof PopiaRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/how-it-works'
     | '/login'
+    | '/popia'
     | '/pricing'
     | '/privacy'
     | '/signup'
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/how-it-works'
     | '/login'
+    | '/popia'
     | '/pricing'
     | '/privacy'
     | '/signup'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/how-it-works'
     | '/login'
+    | '/popia'
     | '/pricing'
     | '/privacy'
     | '/signup'
@@ -237,6 +249,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
+  PopiaRoute: typeof PopiaRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
@@ -263,6 +276,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/popia': {
+      id: '/popia'
+      path: '/popia'
+      fullPath: '/popia'
+      preLoaderRoute: typeof PopiaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -400,6 +420,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
+  PopiaRoute: PopiaRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
