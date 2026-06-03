@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -29,6 +30,11 @@ import { Route as AuthenticatedDocumentsIdRouteImport } from './routes/_authenti
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/account': typeof AuthenticatedAccountRoute
   '/company-profile': typeof AuthenticatedCompanyProfileRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/account': typeof AuthenticatedAccountRoute
   '/company-profile': typeof AuthenticatedCompanyProfileRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/company-profile': typeof AuthenticatedCompanyProfileRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/pricing'
+    | '/privacy'
     | '/signup'
     | '/account'
     | '/company-profile'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/pricing'
+    | '/privacy'
     | '/signup'
     | '/account'
     | '/company-profile'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/pricing'
+    | '/privacy'
     | '/signup'
     | '/_authenticated/account'
     | '/_authenticated/company-profile'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
 }
 
@@ -236,6 +249,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -381,6 +401,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
