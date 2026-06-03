@@ -44,6 +44,14 @@ function DocumentsList() {
   const { data: docs, isLoading } = useQuery({
     queryKey: ["documents"],
     queryFn: async () => {
+      // Auto-reset stuck "processing" jobs older than 5 minutes
+      const cutoff = new Date(Date.now() - STALE_MS).toISOString();
+      await supabase
+        .from("documents")
+        .update({ status: "failed", error_message: "Processing timed out — please retry" })
+        .eq("status", "processing")
+        .lt("updated_at", cutoff);
+
       const { data } = await supabase
         .from("documents")
         .select("*")
