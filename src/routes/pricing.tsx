@@ -150,9 +150,9 @@ function PricingPage() {
 
           <h3 className="font-bold mb-3">Credit calculator</h3>
           <div className="grid sm:grid-cols-3 gap-3 mb-4">
-            <Number label="Tenders / month" value={tenders} onChange={setTenders} />
-            <Number label="Avg pages / tender" value={pages} onChange={setPages} />
-            <Number label="% scanned" value={scanned} onChange={setScanned} />
+            <NumberField label="Tenders / month" value={tenders} onChange={setTenders} />
+            <NumberField label="Avg pages / tender" value={pages} onChange={setPages} />
+            <NumberField label="% scanned" value={scanned} onChange={setScanned} />
           </div>
           <div className="rounded-xl bg-surface-2 border border-border p-4 flex items-center justify-between flex-wrap gap-2">
             <div>
@@ -172,7 +172,7 @@ function PricingPage() {
   );
 }
 
-function Number({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <label className="block">
       <span className="text-xs text-muted-foreground">{label}</span>
