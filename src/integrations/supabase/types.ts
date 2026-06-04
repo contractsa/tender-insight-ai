@@ -158,6 +158,36 @@ export type Database = {
         }
         Relationships: []
       }
+      eligibility_checks: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          overall_status: string | null
+          result: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          overall_status?: string | null
+          result?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          overall_status?: string | null
+          result?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       monitored_tenders: {
         Row: {
           alert_sent: boolean
@@ -246,6 +276,39 @@ export type Database = {
           id?: string
           plan?: string
           trial_ends_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      submission_packs: {
+        Row: {
+          checklist_items: Json
+          created_at: string
+          document_id: string
+          generated_at: string
+          id: string
+          overall_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          checklist_items?: Json
+          created_at?: string
+          document_id: string
+          generated_at?: string
+          id?: string
+          overall_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          checklist_items?: Json
+          created_at?: string
+          document_id?: string
+          generated_at?: string
+          id?: string
+          overall_status?: string
           updated_at?: string
           user_id?: string
         }
