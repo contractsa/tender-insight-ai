@@ -5,9 +5,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeDocument, retryExtractionPass } from "@/lib/analyze.functions";
+import { downloadFullReport, downloadReturnablesPDF, downloadJSON } from "@/lib/pdf-reports";
 import {
   ArrowLeft, AlertTriangle, Loader2, RefreshCw, Sparkles, Download,
   FileJson, FileSpreadsheet, FileText as FileTextIcon, X, ListChecks, Clock,
+  ClipboardCheck, PackageCheck, Search,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/documents/$id")({
@@ -393,6 +395,24 @@ function DocumentDetail() {
           <Link to="/documents" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground mb-2">
             <ArrowLeft className="w-3.5 h-3.5" /> Back to documents
           </Link>
+          <SearchBar master={master} setTab={setTab} />
+          <div className="flex flex-wrap gap-2 mb-3">
+            <Link to="/eligibility/$docId" params={{ docId: id }} className="px-3 py-1.5 rounded-lg bg-brand-teal/15 text-brand-teal text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-brand-teal/25">
+              <ClipboardCheck className="w-3.5 h-3.5" /> Check My Eligibility
+            </Link>
+            <Link to="/submission-pack/$docId" params={{ docId: id }} className="px-3 py-1.5 rounded-lg bg-brand-blue/15 text-brand-blue text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-brand-blue/25">
+              <PackageCheck className="w-3.5 h-3.5" /> Build Submission Pack
+            </Link>
+            <button onClick={() => downloadFullReport(master, { file_name: doc.file_name })} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-blue hover:text-brand-blue">
+              <Download className="w-3.5 h-3.5" /> Full Report PDF
+            </button>
+            <button onClick={() => downloadReturnablesPDF(master, { file_name: doc.file_name })} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-blue hover:text-brand-blue">
+              <Download className="w-3.5 h-3.5" /> Returnables PDF
+            </button>
+            <button onClick={() => downloadJSON(master, { file_name: doc.file_name })} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-blue hover:text-brand-blue">
+              <FileJson className="w-3.5 h-3.5" /> Raw JSON
+            </button>
+          </div>
           <TabBar tab={tab} setTab={setTab} />
         </div>
 
