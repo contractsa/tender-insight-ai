@@ -122,15 +122,13 @@ function SubmissionPackDoc() {
   if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
   if (!data.doc) return <div className="p-8">Not found</div>;
 
-  const mandatoryItems = items.filter((it) => it.mandatory);
-  const completeCount = mandatoryItems.filter((it, i) => {
-    const key = `${it.name}|${items.indexOf(it)}`;
-    return statuses[key] === "complete" || statuses[key] === "na";
-  }).length;
+  const mandatoryStatuses = items.map((it, i) => ({ it, key: `${it.name}|${i}`, s: statuses[`${it.name}|${i}`] ?? "pending" }));
+  const mandatoryItems = mandatoryStatuses.filter((x) => x.it.mandatory);
+  const completeCount = mandatoryItems.filter((x) => x.s === "complete" || x.s === "na").length;
   const readiness = mandatoryItems.length ? Math.round((completeCount / mandatoryItems.length) * 100) : 0;
   const pendingCount = mandatoryItems.length - completeCount;
-  const naCount = items.filter((it, i) => statuses[`${it.name}|${items.indexOf(it)}`] === "na").length;
-  const canSubmit = pendingCount === 0;
+  const naCount = mandatoryStatuses.filter((x) => x.s === "na").length;
+  const canSubmit = mandatoryItems.length === 0 ? true : pendingCount === 0;
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto pb-24">
