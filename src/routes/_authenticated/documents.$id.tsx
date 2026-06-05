@@ -691,8 +691,18 @@ function SubmissionTab({ master }: { master: any }) {
   const s = master?.submission?.submission ?? {};
   const b = s?.briefing_session;
   const d = daysUntil(s?.closing_date);
+  const reg = master?.submission?.regulatory_requirements ?? {};
+  const compliance: any[] = Array.isArray(master?.submission?.mandatory_compliance_documents)
+    ? master.submission.mandatory_compliance_documents
+    : [];
+  const profRegs: any[] = Array.isArray(reg?.professional_registrations) ? reg.professional_registrations : [];
+
+  const yesNo = (v: any) => (v === true ? "Yes" : v === false ? "No" : v ?? "—");
+  const pageRef = (v: any) => (v == null || v === "" || v === 0 ? null : typeof v === "number" ? `Page ${v}` : String(v));
+
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Closing date hero */}
       <div className="surface-card p-6 text-center">
         <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center justify-center gap-2"><Clock className="w-4 h-4" />Closing Date</div>
         <div className="text-3xl sm:text-4xl font-extrabold mb-1">{s?.closing_date ?? "—"}</div>
@@ -702,30 +712,165 @@ function SubmissionTab({ master }: { master: any }) {
             d < 0 ? "bg-muted text-muted-foreground" : d <= 3 ? "bg-destructive/15 text-destructive" : d <= 14 ? "bg-orange-500/15 text-orange-600" : "bg-success/15 text-success"
           }`}>{d < 0 ? "Closed" : d === 0 ? "Closes today" : `${d} days remaining`}</div>
         )}
+        {pageRef(s?.page_reference) && <div className="text-[10px] text-muted-foreground mt-2 uppercase tracking-wider">{pageRef(s?.page_reference)}</div>}
       </div>
 
-      {b?.mandatory && (
-        <div className="surface-card p-5 border-destructive/40 bg-destructive/5">
-          <div className="flex items-center gap-2 text-destructive font-bold text-sm mb-2"><AlertTriangle className="w-4 h-4" />MANDATORY BRIEFING SESSION</div>
-          <dl className="text-sm space-y-1">
-            <Row k="Date" v={b?.date} /><Row k="Time" v={b?.time} /><Row k="Venue" v={b?.venue} />
-            <Row k="Attendance register" v={b?.attendance_register_required ? "Required" : "Optional"} />
-            <Row k="Non-attendance" v={b?.non_attendance_consequence} />
+      {/* Briefing session */}
+      {(b?.mandatory || b?.date || b?.venue) && (
+        <div className={`surface-card p-5 ${b?.mandatory ? "border-destructive/40 bg-destructive/5" : ""}`}>
+          <div className={`flex items-center gap-2 font-bold text-sm mb-2 ${b?.mandatory ? "text-destructive" : ""}`}>
+            {b?.mandatory && <AlertTriangle className="w-4 h-4" />}
+            {b?.mandatory ? "MANDATORY BRIEFING SESSION" : "Briefing Session"}
+          </div>
+          <dl className="text-sm space-y-1.5">
+            <Row k="Date" v={b?.date} />
+            <Row k="Time" v={b?.time} />
+            <Row k="Venue" v={b?.venue} />
+            <Row k="Registration required" v={yesNo(b?.registration_required)} />
+            <Row k="Registration contact" v={b?.registration_contact} />
+            <Row k="Attendance register" v={yesNo(b?.attendance_register_required)} />
+            <Row k="Non-attendance consequence" v={b?.non_attendance_consequence} />
+            <Row k="Page reference" v={pageRef(b?.page_reference)} />
           </dl>
         </div>
       )}
 
+      {/* Submission Details */}
       <div className="surface-card p-5">
         <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Submission Details</h3>
         <dl className="text-sm space-y-1.5">
           <Row k="Method" v={s?.submission_method} />
           <Row k="Physical address" v={s?.physical_address} />
+          <Row k="Tender box details" v={s?.tender_box_details} />
+          <Row k="Portal name" v={s?.portal_name} />
           <Row k="Portal URL" v={s?.portal_url} />
-          <Row k="Copies required" v={s?.number_of_copies} />
-          <Row k="Packaging" v={s?.packaging_instructions} />
-          <Row k="Labelling" v={s?.labelling_instructions} />
+          <Row k="Number of copies" v={s?.number_of_copies} />
+          <Row k="Electronic copy required" v={yesNo(s?.electronic_copy_required)} />
+          <Row k="Flash drive required" v={yesNo(s?.flash_drive_required)} />
+          <Row k="Packaging instructions" v={s?.packaging_instructions} />
+          <Row k="Labelling instructions" v={s?.labelling_instructions} />
+          <Row k="Notes" v={s?.notes} />
         </dl>
       </div>
+
+      {/* Regulatory Requirements */}
+      {Object.keys(reg).length > 0 && (
+        <div className="surface-card p-5">
+          <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Regulatory Requirements</h3>
+
+          {reg?.PPPFA_split && (
+            <div className="mb-4 px-3 py-2 rounded-lg bg-brand-blue/10 border border-brand-blue/30 inline-block">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground mr-2">PPPFA Split</span>
+              <span className="font-bold text-brand-blue">{reg.PPPFA_split}</span>
+            </div>
+          )}
+
+          <div className="grid sm:grid-cols-2 gap-4 mt-2">
+            {reg?.CIDB && (reg.CIDB.required || reg.CIDB.minimum_grade) && (
+              <div className="border border-border rounded-lg p-3">
+                <div className="text-xs font-bold text-brand-teal mb-1.5">CIDB</div>
+                <dl className="text-xs space-y-1">
+                  <Row k="Required" v={yesNo(reg.CIDB.required)} />
+                  <Row k="Minimum grade" v={reg.CIDB.minimum_grade} />
+                  <Row k="Designation" v={reg.CIDB.designation} />
+                  <Row k="Registered at closing" v={yesNo(reg.CIDB.must_be_registered_at_closing)} />
+                  <Row k="JV provisions" v={reg.CIDB.joint_venture_provisions} />
+                  <Row k="Page" v={pageRef(reg.CIDB.page_reference)} />
+                </dl>
+              </div>
+            )}
+            {reg?.BBBEE && (reg.BBBEE.required || reg.BBBEE.minimum_level) && (
+              <div className="border border-border rounded-lg p-3">
+                <div className="text-xs font-bold text-brand-teal mb-1.5">B-BBEE</div>
+                <dl className="text-xs space-y-1">
+                  <Row k="Required" v={yesNo(reg.BBBEE.required)} />
+                  <Row k="Minimum level" v={reg.BBBEE.minimum_level} />
+                  <Row k="Accepted certificates" v={Array.isArray(reg.BBBEE.acceptable_certificate_types) ? reg.BBBEE.acceptable_certificate_types.join(", ") : reg.BBBEE.acceptable_certificate_types} />
+                  <Row k="EME/QSE threshold" v={reg.BBBEE.emd_qse_threshold} />
+                  <Row k="Subcontracting goals" v={reg.BBBEE.subcontracting_goals} />
+                  <Row k="Page" v={pageRef(reg.BBBEE.page_reference)} />
+                </dl>
+              </div>
+            )}
+            {reg?.tax_compliance && (
+              <div className="border border-border rounded-lg p-3">
+                <div className="text-xs font-bold text-brand-teal mb-1.5">SARS Tax Compliance</div>
+                <dl className="text-xs space-y-1">
+                  <Row k="TCS PIN required" v={yesNo(reg.tax_compliance.SARS_TCS_PIN_required)} />
+                  <Row k="Valid at closing" v={yesNo(reg.tax_compliance.must_be_valid_at_closing)} />
+                  <Row k="JV requirements" v={reg.tax_compliance.joint_venture_requirements} />
+                  <Row k="Page" v={pageRef(reg.tax_compliance.page_reference)} />
+                </dl>
+              </div>
+            )}
+            {reg?.CIPC_registration?.required && (
+              <div className="border border-border rounded-lg p-3">
+                <div className="text-xs font-bold text-brand-teal mb-1.5">CIPC Registration</div>
+                <dl className="text-xs space-y-1">
+                  <Row k="Required" v={yesNo(reg.CIPC_registration.required)} />
+                  <Row k="Certified copy" v={yesNo(reg.CIPC_registration.certified_copy_required)} />
+                  <Row k="Page" v={pageRef(reg.CIPC_registration.page_reference)} />
+                </dl>
+              </div>
+            )}
+            {reg?.COIDA?.required && (
+              <div className="border border-border rounded-lg p-3">
+                <div className="text-xs font-bold text-brand-teal mb-1.5">COIDA</div>
+                <dl className="text-xs space-y-1">
+                  <Row k="Required" v={yesNo(reg.COIDA.required)} />
+                  <Row k="Letter of Good Standing" v={yesNo(reg.COIDA.letter_of_good_standing)} />
+                  <Row k="Page" v={pageRef(reg.COIDA.page_reference)} />
+                </dl>
+              </div>
+            )}
+            {reg?.municipal_accounts?.required && (
+              <div className="border border-border rounded-lg p-3">
+                <div className="text-xs font-bold text-brand-teal mb-1.5">Municipal Accounts</div>
+                <dl className="text-xs space-y-1">
+                  <Row k="Required" v={yesNo(reg.municipal_accounts.required)} />
+                  <Row k="Municipality" v={reg.municipal_accounts.municipality} />
+                  <Row k="Page" v={pageRef(reg.municipal_accounts.page_reference)} />
+                </dl>
+              </div>
+            )}
+          </div>
+
+          {profRegs.length > 0 && (
+            <div className="mt-4">
+              <div className="text-xs font-bold text-brand-teal mb-2">Professional Registrations</div>
+              <SimpleTable
+                headers={["Body", "Discipline", "Level", "Required At", "Page"]}
+                rows={profRegs.map((r: any) => [r?.body, r?.discipline, r?.level, r?.required_at ?? r?.when_required, pageRef(r?.page_reference)])}
+              />
+            </div>
+          )}
+
+          <div className="mt-4 flex gap-2 flex-wrap text-[10px]">
+            {reg?.PFMA_applicable && <span className="px-2 py-0.5 rounded bg-muted">PFMA</span>}
+            {reg?.MFMA_applicable && <span className="px-2 py-0.5 rounded bg-muted">MFMA</span>}
+            {reg?.PPPFA_applicable && <span className="px-2 py-0.5 rounded bg-muted">PPPFA</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Mandatory Compliance Documents */}
+      {compliance.length > 0 && (
+        <div className="surface-card p-5">
+          <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-1">Mandatory Compliance Documents</h3>
+          <p className="text-xs text-muted-foreground mb-3">{compliance.length} documents · {compliance.filter((c: any) => c?.disqualifies_if_missing).length} disqualifying</p>
+          <SimpleTable
+            headers={["Document", "Mandatory", "Disqualifies", "Format", "Validity", "Page"]}
+            rows={compliance.map((c: any) => [
+              c?.document_name ?? c?.name,
+              yesNo(c?.mandatory),
+              yesNo(c?.disqualifies_if_missing),
+              c?.format_requirements,
+              c?.validity_requirements,
+              pageRef(c?.page_reference),
+            ])}
+          />
+        </div>
+      )}
     </div>
   );
 }
