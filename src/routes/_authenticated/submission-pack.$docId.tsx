@@ -30,13 +30,28 @@ function orderItems(master: any): any[] {
   const mbd = rets.filter((r) => r?.form_type === "MBD").sort((a, b) => num(a.name) - num(b.name));
   sbd.forEach((r) => push(r, "SBD"));
   mbd.forEach((r) => push(r, "MBD"));
-  const certOrder = ["Tax Compliance", "CIPC", "B-BBEE", "CIDB", "COIDA", "Municipal", "Professional"];
+  const certOrder = ["Tax Compliance", "CIPC", "B-BBEE", "BBBEE", "CIDB", "COIDA", "Municipal", "Professional", "CSD"];
+  const seenCompliance = new Set<number>();
   for (const c of certOrder) {
-    compl.filter((d: any) => new RegExp(c, "i").test(d.document_name ?? d.name ?? "")).forEach((d) => push({
-      name: d.document_name ?? d.name, page_number: d.page_reference ?? d.page,
-      mandatory: d.mandatory, disqualifies_if_missing: d.disqualifies_if_missing,
-    }, "Compliance"));
+    compl.forEach((d: any, idx: number) => {
+      if (seenCompliance.has(idx)) return;
+      if (new RegExp(c, "i").test(d.document_name ?? d.name ?? "")) {
+        seenCompliance.add(idx);
+        push({
+          name: d.document_name ?? d.name, page_number: d.page_reference ?? d.page,
+          mandatory: d.mandatory ?? true, disqualifies_if_missing: d.disqualifies_if_missing ?? true,
+        }, "Compliance");
+      }
+    });
   }
+  // Catch any compliance docs not matched by the cert patterns
+  compl.forEach((d: any, idx: number) => {
+    if (seenCompliance.has(idx)) return;
+    push({
+      name: d.document_name ?? d.name, page_number: d.page_reference ?? d.page,
+      mandatory: d.mandatory ?? true, disqualifies_if_missing: d.disqualifies_if_missing ?? true,
+    }, "Compliance");
+  });
   const remaining = rets.filter((r) => !["SBD", "MBD"].includes(r?.form_type ?? "")).sort((a, b) => (a.page_number ?? 999) - (b.page_number ?? 999));
   remaining.forEach((r) => push(r, "Other"));
   return items;
