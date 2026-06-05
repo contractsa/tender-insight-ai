@@ -30,13 +30,28 @@ function orderItems(master: any): any[] {
   const mbd = rets.filter((r) => r?.form_type === "MBD").sort((a, b) => num(a.name) - num(b.name));
   sbd.forEach((r) => push(r, "SBD"));
   mbd.forEach((r) => push(r, "MBD"));
-  const certOrder = ["Tax Compliance", "CIPC", "B-BBEE", "CIDB", "COIDA", "Municipal", "Professional"];
+  const certOrder = ["Tax Compliance", "CIPC", "B-BBEE", "BBBEE", "CIDB", "COIDA", "Municipal", "Professional", "CSD"];
+  const seenCompliance = new Set<number>();
   for (const c of certOrder) {
-    compl.filter((d: any) => new RegExp(c, "i").test(d.document_name ?? d.name ?? "")).forEach((d) => push({
-      name: d.document_name ?? d.name, page_number: d.page_reference ?? d.page,
-      mandatory: d.mandatory, disqualifies_if_missing: d.disqualifies_if_missing,
-    }, "Compliance"));
+    compl.forEach((d: any, idx: number) => {
+      if (seenCompliance.has(idx)) return;
+      if (new RegExp(c, "i").test(d.document_name ?? d.name ?? "")) {
+        seenCompliance.add(idx);
+        push({
+          name: d.document_name ?? d.name, page_number: d.page_reference ?? d.page,
+          mandatory: d.mandatory ?? true, disqualifies_if_missing: d.disqualifies_if_missing ?? true,
+        }, "Compliance");
+      }
+    });
   }
+  // Catch any compliance docs not matched by the cert patterns
+  compl.forEach((d: any, idx: number) => {
+    if (seenCompliance.has(idx)) return;
+    push({
+      name: d.document_name ?? d.name, page_number: d.page_reference ?? d.page,
+      mandatory: d.mandatory ?? true, disqualifies_if_missing: d.disqualifies_if_missing ?? true,
+    }, "Compliance");
+  });
   const remaining = rets.filter((r) => !["SBD", "MBD"].includes(r?.form_type ?? "")).sort((a, b) => (a.page_number ?? 999) - (b.page_number ?? 999));
   remaining.forEach((r) => push(r, "Other"));
   return items;
@@ -122,15 +137,13 @@ function SubmissionPackDoc() {
   if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
   if (!data.doc) return <div className="p-8">Not found</div>;
 
-  const mandatoryItems = items.filter((it) => it.mandatory);
-  const completeCount = mandatoryItems.filter((it, i) => {
-    const key = `${it.name}|${items.indexOf(it)}`;
-    return statuses[key] === "complete" || statuses[key] === "na";
-  }).length;
+  const mandatoryStatuses = items.map((it, i) => ({ it, key: `${it.name}|${i}`, s: statuses[`${it.name}|${i}`] ?? "pending" }));
+  const mandatoryItems = mandatoryStatuses.filter((x) => x.it.mandatory);
+  const completeCount = mandatoryItems.filter((x) => x.s === "complete" || x.s === "na").length;
   const readiness = mandatoryItems.length ? Math.round((completeCount / mandatoryItems.length) * 100) : 0;
   const pendingCount = mandatoryItems.length - completeCount;
-  const naCount = items.filter((it, i) => statuses[`${it.name}|${items.indexOf(it)}`] === "na").length;
-  const canSubmit = pendingCount === 0;
+  const naCount = mandatoryStatuses.filter((x) => x.s === "na").length;
+  const canSubmit = mandatoryItems.length === 0 ? true : pendingCount === 0;
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto pb-24">
