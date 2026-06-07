@@ -9,8 +9,9 @@ import { downloadFullReport, downloadReturnablesPDF, downloadJSON } from "@/lib/
 import {
   ArrowLeft, AlertTriangle, Loader2, RefreshCw, Sparkles, Download,
   FileJson, FileSpreadsheet, FileText as FileTextIcon, X, ListChecks, Clock,
-  ClipboardCheck, PackageCheck, Search,
+  ClipboardCheck, PackageCheck, Search, Radar,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/documents/$id")({
   component: DocumentDetail,
