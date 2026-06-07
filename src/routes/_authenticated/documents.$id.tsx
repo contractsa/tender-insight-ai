@@ -439,6 +439,9 @@ function DocumentDetail() {
             <button onClick={() => downloadReturnablesPDF(master, { file_name: doc.file_name })} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-blue hover:text-brand-blue">
               <Download className="w-3.5 h-3.5" /> Returnables PDF
             </button>
+            <button onClick={monitorTender} disabled={monitoring} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-teal hover:text-brand-teal disabled:opacity-60">
+              {monitoring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Radar className="w-3.5 h-3.5" />} Monitor this tender
+            </button>
             <button onClick={() => downloadJSON(master, { file_name: doc.file_name })} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-blue hover:text-brand-blue">
               <FileJson className="w-3.5 h-3.5" /> Raw JSON
             </button>
