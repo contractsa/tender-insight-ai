@@ -9,8 +9,9 @@ import { downloadFullReport, downloadReturnablesPDF, downloadJSON } from "@/lib/
 import {
   ArrowLeft, AlertTriangle, Loader2, RefreshCw, Sparkles, Download,
   FileJson, FileSpreadsheet, FileText as FileTextIcon, X, ListChecks, Clock,
-  ClipboardCheck, PackageCheck, Search,
+  ClipboardCheck, PackageCheck, Search, Radar,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/documents/$id")({
   component: DocumentDetail,
@@ -246,14 +247,43 @@ function normaliseMaster(doc: any): any | null {
 // ============================================================
 function DocumentDetail() {
   const { id } = Route.useParams();
+  const { user } = useAuth();
   const qc = useQueryClient();
   const analyzeFn = useServerFn(analyzeDocument);
   const retryFn = useServerFn(retryExtractionPass);
   const [running, setRunning] = useState(false);
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [monitoring, setMonitoring] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [tab, setTab] = useState<TabKey>("summary");
   const autoTriggered = useRef(false);
+
+  async function monitorTender() {
+    if (!user) { toast.error("Sign in required"); return; }
+    setMonitoring(true);
+    try {
+      const m = (data?.doc as any)?.master_result ?? {};
+      const sub = m?.submission?.submission ?? {};
+      const tri = m?.triage ?? {};
+      const payload = {
+        user_id: user.id,
+        document_id: id,
+        tender_reference: tri?.reference_number ?? null,
+        tender_title: tri?.tender_title ?? tri?.title ?? (data?.doc as any)?.file_name ?? null,
+        issuing_authority: tri?.issuing_entity ?? null,
+        closing_date: sub?.closing_date ?? null,
+        closing_time: sub?.closing_time ?? null,
+        status: "active",
+        last_checked: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("monitored_tenders").upsert(payload as any, { onConflict: "user_id,document_id" } as any);
+      if (error) throw error;
+      toast.success("Added to Monitored Tenders");
+      qc.invalidateQueries({ queryKey: ["monitored_tenders"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not add to monitoring");
+    } finally { setMonitoring(false); }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ["document", id],
@@ -408,6 +438,9 @@ function DocumentDetail() {
             </button>
             <button onClick={() => downloadReturnablesPDF(master, { file_name: doc.file_name })} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-blue hover:text-brand-blue">
               <Download className="w-3.5 h-3.5" /> Returnables PDF
+            </button>
+            <button onClick={monitorTender} disabled={monitoring} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-teal hover:text-brand-teal disabled:opacity-60">
+              {monitoring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Radar className="w-3.5 h-3.5" />} Monitor this tender
             </button>
             <button onClick={() => downloadJSON(master, { file_name: doc.file_name })} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold inline-flex items-center gap-1.5 hover:border-brand-blue hover:text-brand-blue">
               <FileJson className="w-3.5 h-3.5" /> Raw JSON
